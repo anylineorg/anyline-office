@@ -959,7 +959,7 @@ public class WTc extends WElement {
     }
     /**
      * 复制一列
-     * @param content 是复制空其中内容
+     * @param content 是否复制其中内容
      * @return wtr
      */
     public WTc clone(boolean content){
