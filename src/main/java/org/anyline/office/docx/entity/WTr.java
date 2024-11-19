@@ -500,7 +500,7 @@ public class WTr extends WElement {
 
     /**
      * 复制一行
-     * @param content 是复制空其中内容
+     * @param content 是否复制其中内容
      * @return wtr
      */
     public WTr clone(boolean content){
