@@ -49,6 +49,16 @@ public class XRow extends XElement{
         }
     }
 
+    public List<String> placeholders(String regex){
+        List<String> placeholders = new ArrayList<>();
+        for(XCol col:cols){
+            placeholders.addAll(col.placeholders(regex));
+        }
+        return placeholders;
+    }
+    public List<String> placeholders(){
+        return placeholders("\\$\\{.*?\\}");
+    }
     /**
      * 创建并插入行(index<0时 index = rows.size+index)
      * @param index 插入位置 下标从0开始 如果index<0 index=rows.size+index -1:表示最后一行
@@ -77,10 +87,12 @@ public class XRow extends XElement{
             }
         }
 
-        int x = index + 1;
-        if(append){
-            x = all.size()+1;
-        }
+        //int x = index + 1;
+        //if(append){
+            //中间有可能有被删除的行 r比序号大的多
+        //    x = all.size()+1;
+       // }
+        int x = template.r+1;
         int cols = values.size();
         String spans = "1:"+cols;
         row.addAttribute("r",x+"");
@@ -109,20 +121,22 @@ public class XRow extends XElement{
 
             for(int i=index; i<all.size(); i++){
                 XRow item = all.get(i);
-                int r = i+1;
-                item.r = r;
-                Element item_src = item.src;
-                item_src.attribute("r").setValue(r+"");
-                for(XCol col:item.cols){
-                    col.x(r);
-                    col.r(col.y()+r);
-                }
+                item.r(item.r()+1);
             }
         }
         return xr;
     }
     public int r(){
         return r;
+    }
+    public XRow r(int r){
+        this.r = r;
+        src.attribute("r").setValue(r+"");
+        for(XCol col:cols){
+            col.x(r);
+            col.r(col.y()+r);
+        }
+        return this;
     }
     public String spans(){
         return spans;
@@ -159,5 +173,17 @@ public class XRow extends XElement{
         for(XCol col:cols){
             col.replace(parse, replaces);
         }
+    }
+
+    /**
+     * 复制一行
+     * @param  r 同时修改行标识
+     * @param content 是否复制其中内容
+     * @return wtr
+     */
+    public XRow clone(int r, boolean content){
+        XRow clone = new XRow(this.book, sheet, src.createCopy(), r-1);
+        clone.r(r);
+        return clone;
     }
 }
