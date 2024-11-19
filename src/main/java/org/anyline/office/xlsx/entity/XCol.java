@@ -20,10 +20,7 @@ import org.anyline.office.docx.util.DocxUtil;
 import org.anyline.util.BasicUtil;
 import org.dom4j.Element;
 
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * 参考 https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.spreadsheet.cell?view=openxml-3.0.1
@@ -87,6 +84,33 @@ public class XCol extends XElement{
         return this;
     }
 
+    public List<String> placeholders(String regex){
+        List<String> placeholders = new ArrayList<>();
+        if("s".equals(type)){
+            //文本类型
+            int idx = Integer.parseInt(value);
+            ShareString ss = book.share(idx);
+            if(null != ss) {
+                String txt = ss.text();
+                if(null != txt) {
+                    List<String> flags = DocxUtil.splitKey(txt, regex);
+                    if(!flags.isEmpty()){
+                        for(String flag:flags){
+                            String key = null;
+                            if(flag.startsWith("${") && flag.endsWith("}")) {
+                                key = flag.substring(2, flag.length() - 1);
+                                placeholders.add(key);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return placeholders;
+    }
+    public List<String> placeholders(){
+        return placeholders("\\$\\{.*?\\}");
+    }
     /**
      * 计算列号
      * @param index 下标从0开始 0=A 25=Z 26=AA
