@@ -52,6 +52,7 @@ public class XSheet {
             this.rows.add(xr);
         }
     }
+
     public XWorkBook book(){
         return book;
     }
@@ -87,7 +88,16 @@ public class XSheet {
             row.parseTag();
         }
     }
-
+    public List<String> placeholders(String regex){
+        List<String> placeholders = new ArrayList<>();
+        for(XRow row:rows){
+            placeholders.addAll(row.placeholders(regex));
+        }
+        return placeholders;
+    }
+    public List<String> placeholders(){
+        return placeholders("\\$\\{.*?\\}");
+    }
     /**
      * 插入行 注意插入行后 index 之后所有行与单元格需要重新计算r属性 如果插入量大 应该在插入完成后一次生调整
      * @param index 插入位置 下标从0开始 如果index<0 index=rows.size+index -1:表示最后一行
@@ -113,6 +123,17 @@ public class XSheet {
     public XRow insert(int index, List<Object> values){
         return insert(index, null, values);
     }
+    public XSheet insert(int index, XRow row){
+        rows.add(index, row);
+        Element datas = doc().getRootElement().element("sheetData");
+        datas.elements().add(index, row.src);
+
+        for(int i=index; i<rows.size(); i++){
+            XRow item = rows.get(i);
+            item.r(item.r()+1);
+        }
+        return this;
+    }
     /**
      * 追加行
      * @param template 模板行 如果null则以最后一行作模板
@@ -121,6 +142,12 @@ public class XSheet {
      */
     public XRow append(XRow template, List<Object> values){
         return insert(-1, template, values);
+    }
+    public XSheet append(XRow row){
+        rows.add(row);
+        Element datas = doc().getRootElement().element("sheetData");
+        datas.elements().add(row.src);
+        return this;
     }
 
     /**
@@ -132,11 +159,33 @@ public class XSheet {
         XRow template = rows.get(rows.size()-1);
         return append(template, values);
     }
+    public XSheet remove(XRow row){
+        int index = rows.indexOf(row);
+        if(index != -1){
+            for(int i=index; i<rows.size(); i++){
+                XRow item = rows.get(i);
+                item.r(item.r()-1);
+            }
+        }
+        rows.remove(row);
+        Element datas = doc().getRootElement().element("sheetData");
+        datas.elements().remove(row.src);
+        return this;
+    }
     public void replace(boolean parse, LinkedHashMap<String, String> replaces){
         for(XRow row:rows){
             row.replace(parse, replaces);
         }
     }
 
+    /**
+     * 如果删除过行 可以重新排序 避免r属性重复或不连续
+     */
+    public void sort(){
+        int r = 1;
+        for(XRow row:rows){
+            row.r(r++);
+        }
+    }
 
 }
