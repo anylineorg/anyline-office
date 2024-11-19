@@ -80,6 +80,9 @@ public class XWorkBook {
     }
 
     public LinkedHashMap<String, XSheet> sheets(){
+        if(sheets.isEmpty()){
+            load();
+        }
         return sheets;
     }
 
@@ -228,4 +231,12 @@ public class XWorkBook {
         return index;
     }
 
+    /**
+     * 如果删除过行 可以重新排序 避免r属性重复或不连续
+     */
+    public void sort(){
+        for(XSheet sheet:sheets.values()){
+            sheet.sort();
+        }
+    }
 }
