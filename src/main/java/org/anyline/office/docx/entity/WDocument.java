@@ -24,7 +24,12 @@ import org.anyline.entity.html.Td;
 import org.anyline.entity.html.Tr;
 import org.anyline.handler.Downloader;
 import org.anyline.handler.Uploader;
+import org.anyline.log.Log;
 import org.anyline.log.LogProxy;
+import org.anyline.office.docx.tag.DateFormat;
+import org.anyline.office.docx.tag.Img;
+import org.anyline.office.docx.tag.NumberFormat;
+import org.anyline.office.docx.tag.Tag;
 import org.anyline.office.docx.util.DocxUtil;
 import org.anyline.util.*;
 import org.anyline.util.regular.RegularUtil;
@@ -32,7 +37,6 @@ import org.dom4j.Document;
 import org.dom4j.DocumentHelper;
 import org.dom4j.Element;
 import org.dom4j.Node;
-import org.anyline.log.Log;
 
 import java.io.File;
 import java.io.InputStream;
@@ -56,9 +60,16 @@ public class WDocument extends WElement {
     private LinkedHashMap<String, org.dom4j.Document> charts = new LinkedHashMap<>();
 
     private LinkedHashMap<String, Map<String, String>> styles = new LinkedHashMap<>();
+    /**
+     * 占位值
+     */
     private LinkedHashMap<String, String> replaces = new LinkedHashMap<>();
     /**
-     * 文本原样替换，不解析原文没有${}的也不要添加
+     * 与replaces不同的是values中可以包含复杂结构
+     */
+    private LinkedHashMap<String, Object> variables = new LinkedHashMap<>();
+    /**
+     * 文本原样替换，不解析原文中的标签,没有${}的也不要添加
      */
     private LinkedHashMap<String, String> txt_replaces = new LinkedHashMap<>();
     private boolean autoMergePlaceholder = true;
@@ -152,7 +163,17 @@ public class WDocument extends WElement {
             this.styles.put(key, map.get(key));
         }
     }
-
+    private Map<String, Object> environment = new LinkedHashMap<>();
+    /**
+     * context值
+     * @param key key
+     * @param value value
+     * @return this
+     */
+    public WDocument environment(String key, Object value){
+        environment.put(key, value);
+        return this;
+    }
     /**
      * 设置占位符替换值 在调用save时执行替换<br/>
      * 注意如果不解析的话 不会添加自动${}符号 按原文替换,是替换整个文件的纯文件，包括标签名在内
@@ -160,26 +181,34 @@ public class WDocument extends WElement {
      * @param key 占位符
      * @param content 替换值
      */
-    public void replace(boolean parse, String key, String content){
+    public WDocument replace(boolean parse, String key, String content){
         if(null == key && key.trim().length()==0){
-            return;
+            return this;
         }
         if(parse) {
             replaces.put(key, content);
         }else{
             txt_replaces.put(key, content);
         }
+        return this;
     }
-    public void replace(String key, String content){
-        replace(true, key, content);
+    public WDocument variable(String key, Object value){
+        variables.put(key, value);
+        return this;
     }
-    public void replace(boolean parse, String key, File ... words){
-        replace(parse, key, BeanUtil.array2list(words));
+    public LinkedHashMap<String, Object> variables(){
+        return variables;
     }
-    public void replace(String key, File ... words){
-        replace(true, key, BeanUtil.array2list(words));
+    public WDocument replace(String key, String content){
+        return replace(true, key, content);
     }
-    public void replace(boolean parse, String key, List<File> words){
+    public WDocument replace(boolean parse, String key, File ... words){
+        return replace(parse, key, BeanUtil.array2list(words));
+    }
+    public WDocument replace(String key, File ... words){
+        return replace(true, key, BeanUtil.array2list(words));
+    }
+    public WDocument replace(boolean parse, String key, List<File> words){
         if(null != words) {
             StringBuilder content = new StringBuilder();
             for(File word:words) {
@@ -191,10 +220,18 @@ public class WDocument extends WElement {
                 txt_replaces.put(key, content.toString());
             }
         }
+        return this;
     }
 
     public void replace(String key, List<File> words){
         replace(true, key, words);
+    }
+
+    public LinkedHashMap<String, String> getReplaces(){
+        return replaces;
+    }
+    public LinkedHashMap<String, String> getTextReplaces(){
+        return txt_replaces;
     }
     public void save(){
         save(Charset.forName("UTF-8"));
@@ -206,6 +243,8 @@ public class WDocument extends WElement {
             if(autoMergePlaceholder){
                 mergePlaceholder();
             }
+            //替换占位符前先解析标签
+            tag();
             //执行替换
             replace(src, replaces);
             Map<String, String> zip_replaces = new HashMap<>();
@@ -227,7 +266,7 @@ public class WDocument extends WElement {
             }
             for(String name:charts.keySet()){
                 Document doc = charts.get(name);
-                Element element = doc.getRootElement();
+                //Element element = doc.getRootElement();
                 //replace(element, replaces);
                 String txt = DomUtil.format(doc);
                 txt = BasicUtil.replace(txt, txt_replaces);
@@ -247,6 +286,77 @@ public class WDocument extends WElement {
         }
     }
 
+    /**
+     * 替换占位符前 先解析标签
+     */
+    public void tag(){
+        load();
+        //全部t标签
+        List<Element> ts = DomUtil.elements(src, "t");
+        int size = ts.size();
+        for(int i = 0; i < size; i++){
+            Element t = ts.get(i);
+            String txt = t.getTextTrim();
+            System.out.println(txt);
+            if(txt.startsWith("<")){
+                //TODO 解析被拆分的标签
+                List<Element> starts = completion(ts, i+1, "aol");
+                //找到开始标签
+                if(!starts.isEmpty()){
+                    for(Element start:starts){
+                    }
+                }
+            }else if(txt.startsWith("<aol:")){
+
+            }
+            try {
+                txt = txt.replace("”", "\"");
+                String reg = "(?i)(<aol:(\\w+)[^<]*?>)\\s*(</aol:\\2>)";
+                List<String> tags = RegularUtil.fetch(txt, reg);
+                for(String tag:tags){
+                    //标签name如<aol:img 中的img
+                    String name = RegularUtil.cut(tag, "aol:", " ");
+                    Tag instance = null;
+                    if("img".equalsIgnoreCase(name)){
+                        instance = new Img();
+                    }else if("date".equalsIgnoreCase(name)){
+                        instance = new DateFormat();
+                    }else if("number".equalsIgnoreCase(name)){
+                        instance = new NumberFormat();
+                    }
+                    //复制占位值
+                    instance.init(this);
+                    //把 aol标签解析成html标签 下一步会解析html标签
+                    String html = instance.parse(txt);
+                    txt = txt.replace(tag, html);
+                }
+                System.out.println("parse:" + txt);
+                t.setText(txt);
+            }catch (Exception e){
+                e.printStackTrace();
+            }
+        }
+    }
+
+    /**
+     * 包含key的下一个element,如果中间遇到其他内容则中断搜索
+     * @param elements 集合
+     * @param start 开始搜索位置
+     * @param key 关键字
+     * @return Element
+     */
+    public List<Element> completion(List<Element> elements, int start, String key){
+        List<Element> list = new ArrayList<>();
+        int size = elements.size();
+        for(int i = start; i < size; i++){
+            Element element = elements.get(i);
+            String txt = element.getTextTrim();
+            if(txt.startsWith(key)){
+
+            }
+        }
+        return list;
+    }
     /**
      * 合并点位符 ${key} 拆分到3个t中的情况
      * 调用完replace后再调用当前方法，因为需要用到replace里提供的占位符列表
@@ -301,6 +411,55 @@ public class WDocument extends WElement {
         for(Element remove:removes){
             remove.getParent().remove(remove);
         }
+    }
+    //合并被拆到多个t中的标签体
+    public void mergeTag(Element box){
+        List<String> list = new ArrayList<>();
+        List<Element> ts = DomUtil.elements(box, "t");
+        List<Element> removes = new ArrayList<>();
+        int size = ts.size();
+        for(int i=0; i<size; i++){
+            Element t = ts.get(i);
+            String txt = t.getTextTrim();
+            if(txt.startsWith("<aol:")) {
+                String name = null;
+                if(txt.contains(" ")){
+                    name = RegularUtil.cut(txt, "aol:", " ");
+                }
+                //找到结尾标签以及之前的内容
+                List<Element> next = nextByEnd(ts, i+1, name);
+            }
+        }
+        for(Element remove:removes){
+            remove.getParent().remove(remove);
+        }
+    }
+
+    /**
+     *
+     * @param elements
+     * @param start
+     * @param tag
+     * @return
+     */
+    public List<Element> nextByEnd(List<Element> elements, int start, String tag){
+        String end = "</aol:"+tag+">";
+        List<Element> next = new ArrayList<>();
+        int size = elements.size();
+        boolean chk = false; //是否出现结束标签标识 </
+        boolean finish = false; //是否完成结束标签查找
+        for(int i=start; i<size; i++){
+            Element element = elements.get(i);
+            next.add(element);
+            String txt = element.getTextTrim();
+            if(txt.contains("/")){
+                chk = true;
+            }
+            if(chk && txt.contains(">")){
+                break;
+            }
+        }
+        return next;
     }
 
     /**
@@ -1336,6 +1495,14 @@ public class WDocument extends WElement {
             }
             if (subfix.length() > 20) {
                 subfix = "jpeg";
+            }
+        }
+        //点位符
+        if(src.startsWith("${")){
+            String key = src.substring(2, src.length() - 1);
+            src = replaces.get(key);
+            if(null == src){
+                src = txt_replaces.get(key);
             }
         }
         File tmpdir = new File(System.getProperty("java.io.tmpdir"));
