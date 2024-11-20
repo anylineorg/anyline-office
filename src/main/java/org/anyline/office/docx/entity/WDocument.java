@@ -26,10 +26,7 @@ import org.anyline.handler.Downloader;
 import org.anyline.handler.Uploader;
 import org.anyline.log.Log;
 import org.anyline.log.LogProxy;
-import org.anyline.office.docx.tag.DateFormat;
-import org.anyline.office.docx.tag.Img;
-import org.anyline.office.docx.tag.NumberFormat;
-import org.anyline.office.docx.tag.Tag;
+import org.anyline.office.docx.tag.*;
 import org.anyline.office.docx.util.DocxUtil;
 import org.anyline.util.*;
 import org.anyline.util.regular.RegularUtil;
@@ -323,6 +320,8 @@ public class WDocument extends WElement {
                         instance = new DateFormat();
                     }else if("number".equalsIgnoreCase(name)){
                         instance = new NumberFormat();
+                    }else if("checkbox".equalsIgnoreCase(name)){
+                        instance = new CheckBox();
                     }
                     //复制占位值
                     instance.init(this);
@@ -330,7 +329,7 @@ public class WDocument extends WElement {
                     String html = instance.parse(txt);
                     txt = txt.replace(tag, html);
                 }
-                System.out.println("parse:" + txt);
+                System.out.println("parse result:" + txt);
                 t.setText(txt);
             }catch (Exception e){
                 e.printStackTrace();
