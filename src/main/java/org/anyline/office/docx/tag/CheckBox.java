@@ -59,6 +59,8 @@ public class CheckBox extends AbstractTag implements Tag {
      * 一般在单选项时用到
      */
     private boolean checked = false;
+    private String type = "checkbox"; //text:只显示文本
+    private String split = ""; //只显示文本时 设置分隔符号
 
     @Override
     public String parse(String text) {
@@ -143,14 +145,14 @@ public class CheckBox extends AbstractTag implements Tag {
             }
             int qty = 0;
             if (null != head) {
-                if (null != headValue) {
+                qty ++;
+                if (null != headValue && !"text".equalsIgnoreCase(type)) {
                     if (checked || checkedValue.equals(headValue) || "true".equalsIgnoreCase(headValue) || "checked".equalsIgnoreCase(headValue) || checked(value, headValue)) {
                         //选中
                         html.append("☑");
                     } else {
                         html.append("☐");
                     }
-                    qty ++;
                 }
                 html.append(head);
                 if(vol > 0 && qty%vol == 0){
@@ -171,10 +173,15 @@ public class CheckBox extends AbstractTag implements Tag {
                             chk = chk.toString().trim();
                         }
                     }
-                    if(checkedValue.equals(chk) || "true".equalsIgnoreCase(chk+"") || "checked".equalsIgnoreCase(chk+"") || checked(chks,item.get(valueKey)) ) {
-                        html.append("☑");
-                    }else{
-                        html.append("☐");
+                    if(qty > 1){
+                        html.append(split);
+                    }
+                    if(!"text".equalsIgnoreCase(type)) {
+                        if (checkedValue.equals(chk) || "true".equalsIgnoreCase(chk + "") || "checked".equalsIgnoreCase(chk + "") || checked(chks, item.get(valueKey))) {
+                            html.append("☑");
+                        } else {
+                            html.append("☐");
+                        }
                     }
                     if(BasicUtil.isEmpty(label)) {
                         String labelBody = "";
