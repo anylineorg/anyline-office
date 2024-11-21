@@ -74,6 +74,14 @@ public class CheckBox extends AbstractTag implements Tag {
         }
         data = RegularUtil.fetchAttributeValue(text, "data");
         value = RegularUtil.fetchAttributeValue(text, "value");
+        split = RegularUtil.fetchAttributeValue(text, "split");
+        if(null == split){
+            split = "";
+        }
+        if(BasicUtil.isEmpty(data)){
+            return "";
+        }
+        type = RegularUtil.fetchAttributeValue(text, "type");
         String vk = RegularUtil.fetchAttributeValue(text, "valueKey");
         if(BasicUtil.isNotEmpty(vk)){
             valueKey = vk;
@@ -86,14 +94,7 @@ public class CheckBox extends AbstractTag implements Tag {
 
         if (null != data) {
             if (data instanceof String) {
-                String str = (String)data;
-                if (str.startsWith("{") && str.endsWith("}")) {
-                    //{0:否,1:是}
-                    data = str.replace("{", "").replace("}", "");
-                } else if(BasicUtil.checkEl(str)){
-                    String key = str.substring(2, str.length() - 1);
-                    data = variables.get(key);
-                }
+                data = data((String)data);
             }
             if (data instanceof String) {
                 String items[] = data.toString().split(",");
@@ -112,18 +113,8 @@ public class CheckBox extends AbstractTag implements Tag {
             }
             // 选中值
             if (null != this.value) {
-                if (!(this.value instanceof String || this.value instanceof Collection)) {
-                    this.value = this.value.toString();
-                }
-                if (this.value instanceof String) {
-                    String str = (String) value;
-                    if (str.startsWith("{") && str.endsWith("}")) {
-                        value = str.replace("{", "").replace("}", "");
-                    }
-                }
-                if (this.value instanceof String) {
-                    this.value = BeanUtil.array2list(this.value.toString().split(","));
-                } else if (this.value instanceof Collection) {
+                value = data(value.toString());
+                if (this.value instanceof Collection) {
                     List list = new ArrayList();
                     Collection cols = (Collection) this.value;
                     for (Object item : cols) {
@@ -137,7 +128,13 @@ public class CheckBox extends AbstractTag implements Tag {
                 }
             }
             Collection<Map> items = (Collection<Map>) data;
-            Collection<?> chks = (Collection<?>) this.value;
+            Collection chks = null;
+            if(value instanceof Collection) {
+                chks = (Collection<?>) this.value;
+            }else{
+                chks = new ArrayList<>();
+                chks.add(value);
+            }
 
 
             if (null == headValue) {
