@@ -17,12 +17,11 @@
 package org.anyline.office.docx.tag;
 
 import org.anyline.office.docx.entity.WDocument;
+import org.anyline.util.BasicUtil;
 import org.anyline.util.BeanUtil;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
+import java.util.*;
 
 public abstract class AbstractTag implements Tag{
     protected List<Tag> children = new ArrayList<>();
@@ -99,6 +98,42 @@ public abstract class AbstractTag implements Tag{
         return text;
     }
 
+    public Object data(String key){
+        Object data = key;
+        if(BasicUtil.checkEl(key)){
+            //${users}
+            key = key.substring(2, key.length() - 1);
+            data = variables.get(key);
+            if(null == data){
+                data = replaces.get(key);
+            }
+            if(null == data){
+                data = txt_replaces.get(key);
+            }
+        }else if(key.startsWith("{") && key.endsWith("}")){
+            key = key.replace("{", "").replace("}", "");
+            data = key;
+            if(key.contains(",")){
+                String[] ks = key.split(",");
+                List<String> list = new ArrayList<>();
+                for(String k:ks){
+                    //{0:关,1:开}
+                    if(k.contains(":")){
+                        String[] kv = k.split(":");
+                        if(kv.length ==2){
+                            Map map = new HashMap();
+                            map.put(kv[0], kv[1]);
+                        }
+                    }else {
+                        //{FI,CO,HR}
+                        list.add(k);
+                    }
+                }
+                data = list;
+            }
+        }
+        return data;
+    }
     /**
      * 替换占位符
      * @param text 原文
