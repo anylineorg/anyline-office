@@ -7,19 +7,17 @@ import org.anyline.util.regular.RegularUtil;
 public class NumberFormat extends AbstractTag implements Tag{
     @Override
     public String parse(String text) {
-        String result = text;
+        String result = "";
         //<aol:number format="###,##0.00" value="${total}"></aol:number>
-        String value = RegularUtil.fetchAttributeValue(text, "value");
+        String key = RegularUtil.fetchAttributeValue(text, "value");
         String format = RegularUtil.fetchAttributeValue(text, "format");
-        if(null == value){
+        if(BasicUtil.isEmpty(key) || BasicUtil.isEmpty(format)){
             return "";
         }
-        value = value.trim();
-        if (BasicUtil.checkEl(value)) {
-            String key = value.substring(2, value.length() - 1);
-            value = replaces.get(key);
+        Object data = data(key.trim());
+        if(null != data) {
+            result = NumberUtil.format(data.toString(), format);
         }
-        result = NumberUtil.format(value, format);
         return result;
     }
 }
