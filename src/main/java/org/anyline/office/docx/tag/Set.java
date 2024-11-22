@@ -29,7 +29,7 @@ public class Set extends AbstractTag implements Tag{
             return "";
         }
         data = data(key);
-        if (null != data) {
+        if (BasicUtil.isNotEmpty(data)) {
             if(data instanceof Collection) {
                 Collection items = (Collection) data;
                 if(BasicUtil.isNotEmpty(selector)) {
