@@ -15,7 +15,7 @@ public class NumberFormat extends AbstractTag implements Tag{
             return "";
         }
         Object data = data(key.trim());
-        if(null != data) {
+        if(BasicUtil.isNotEmpty(data)) {
             result = NumberUtil.format(data.toString(), format);
         }
         return result;

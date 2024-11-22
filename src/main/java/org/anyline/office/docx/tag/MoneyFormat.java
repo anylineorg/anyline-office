@@ -16,7 +16,7 @@ public class MoneyFormat extends AbstractTag implements Tag{
             return "";
         }
         Object data = data(key.trim());
-        if(null != data) {
+        if(BasicUtil.isNotEmpty(data)) {
             double d = BasicUtil.parseDouble(data, 0d);
             result = MoneyUtil.format(d);
         }
