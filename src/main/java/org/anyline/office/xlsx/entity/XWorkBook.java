@@ -171,7 +171,7 @@ public class XWorkBook {
     }
 
     /**
-     * 合并点位符 ${key} 拆分到3个t中的情况
+     * 合并占位符 ${key} 拆分到3个t中的情况
      * 调用完replace后再调用当前方法，因为需要用到replace里提供的占位符列表
      */
     public void mergePlaceholder(){
@@ -180,7 +180,7 @@ public class XWorkBook {
         mergePlaceholder(placeholders);
     }
     /**
-     * 合并点位符 ${key} 拆分到3个t中的情况
+     * 合并占位符 ${key} 拆分到3个t中的情况
      * @param placeholders 占位符列表 带不还${}都可以 最终会处理掉${}
      */
     public void mergePlaceholder(List<String> placeholders){

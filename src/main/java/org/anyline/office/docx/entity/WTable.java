@@ -56,7 +56,7 @@ public class WTable extends WElement {
     }
 
     /**
-     * 根据书签或点位符获取行
+     * 根据书签或占位符获取行
      * @param bookmark 书签或占位符 包含{和}的按占位符搜索
      * @return wtr
      */
@@ -87,7 +87,7 @@ public class WTable extends WElement {
     }
 
     /**
-     * 根据书签或点位符获取列
+     * 根据书签或占位符获取列
      * @param bookmark 书签或占位符 包含{和}的按占位符搜索
      * @return wtr
      */
