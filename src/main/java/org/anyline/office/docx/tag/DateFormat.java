@@ -11,7 +11,7 @@ public class DateFormat extends AbstractTag implements Tag{
     public String parse(String text) {
         String result = text;
         //<aol:date format="yyyy-MM-dd HH:mm:ss" value="${current_time}"></aol:date>
-        String value = RegularUtil.fetchAttributeValue(text, "value");
+        String key = RegularUtil.fetchAttributeValue(text, "value");
         //空值时 是否取当前时间
         String evl = RegularUtil.fetchAttributeValue(text, "evl");
         String format = RegularUtil.fetchAttributeValue(text, "format");
@@ -21,31 +21,20 @@ public class DateFormat extends AbstractTag implements Tag{
         }
 
         Date date = null;
-        if(null == value){
+        if(null == key){
             if("true".equalsIgnoreCase(evl) || "1".equalsIgnoreCase(evl)){
                 date = new Date();
             }else {
                 return "";
             }
         }
-        if(null == date){
 
+        Object data = data(key);
+        if(BasicUtil.isEmpty(data)){
+            return "";
         }
-        value = value.trim();
-        if (BasicUtil.checkEl(value)) {
-            //占位符
-            value = placeholder(value);
-            if(BasicUtil.isNotEmpty(value)) {
-                date = DateUtil.parse(value);
-            }else{
-                String key = value.substring(2, value.length() - 1);
-                Object val = variables.get(key);
-                if(null != val){
-                    date = DateUtil.parse(val);
-                }
-            }
-        }
-        if(null == date){
+        date = DateUtil.parse(data);
+        if(null == data){
             return "";
         }
         result = DateUtil.format(date, format);
