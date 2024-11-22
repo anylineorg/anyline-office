@@ -43,6 +43,12 @@ public abstract class AbstractTag implements Tag{
         this.txt_replaces.putAll(doc.getTextReplaces());
         this.variables.putAll(doc.variables());
     }
+    public void variable(String key, Object value) {
+        variables.put(key, value);
+    }
+    public void variable(Map<String, Object> values) {
+        variables.putAll(values);
+    }
     /**
      * 设置占位符替换值 在调用save时执行替换<br/>
      * 注意如果不解析的话 不会添加自动${}符号 按原文替换,是替换整个文件的纯文件，包括标签名在内
@@ -88,10 +94,6 @@ public abstract class AbstractTag implements Tag{
     public Tag replace(String key, List<File> words){
         return replace(true, key, words);
     }
-    public Tag variable(String key, Object value){
-        variables.put(key, value);
-        return this;
-    }
     public LinkedHashMap<String, Object> variables(){
         return variables;
     }
@@ -100,6 +102,9 @@ public abstract class AbstractTag implements Tag{
     }
 
     public Object data(String key){
+        if(null == key){
+            return null;
+        }
         Object data = key;
         if(BasicUtil.checkEl(key)){
             //${users}
@@ -114,19 +119,7 @@ public abstract class AbstractTag implements Tag{
 
             if(null == data){
                 if(key.contains(".")){
-                    //user.dept.name
-                    String[] ks = key.split("\\.");
-                    int size = ks.length;
-                    if(size > 1) {
-                        data = variables.get(ks[0]);
-                        for (int i = 1; i < size; i++) {
-                            String k = ks[i];
-                            if(null == data){
-                                break;
-                            }
-                            data = BeanUtil.getFieldValue(data, k);
-                        }
-                    }
+                    data = BeanUtil.value(variables, key);
                 }
             }
         }else if(key.startsWith("{") && key.endsWith("}")){
