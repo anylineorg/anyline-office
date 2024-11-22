@@ -21,7 +21,7 @@ public class Set extends AbstractTag implements Tag{
         String key = RegularUtil.fetchAttributeValue(text, "data");
         var = RegularUtil.fetchAttributeValue(text, "var");
         selector = RegularUtil.fetchAttributeValue(text, "selector");
-        index = BasicUtil.parseInt(RegularUtil.fetchAttributeValue(text, "var"), null);
+        index = BasicUtil.parseInt(RegularUtil.fetchAttributeValue(text, "index"), null);
         begin = BasicUtil.parseInt(RegularUtil.fetchAttributeValue(text, "begin"), null);
         end = BasicUtil.parseInt(RegularUtil.fetchAttributeValue(text, "end"), null);
         qty = BasicUtil.parseInt(RegularUtil.fetchAttributeValue(text, "qty"), null);
@@ -54,7 +54,11 @@ public class Set extends AbstractTag implements Tag{
                     }
                 }
             }
-            variables.put(var, data);
+            doc.variable(var, data);
+            doc.replace(var, data.toString());
+        }else{
+            doc.replace(var, "");
+            doc.variable(var, null);
         }
         return html;
     }
