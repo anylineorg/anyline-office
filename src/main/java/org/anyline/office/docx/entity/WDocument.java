@@ -401,7 +401,6 @@ public class WDocument extends WElement {
         for(int i = 0; i < size; i++){
             Element t = ts.get(i);
             String txt = t.getTextTrim();
-            System.out.println("\n原文:"+txt);
             if(txt.startsWith("<")){
                 //TODO 解析被拆分的标签
                 List<Element> starts = completion(ts, i+1, "aol");
@@ -414,43 +413,60 @@ public class WDocument extends WElement {
 
             }
             try {
-                txt = txt.replace("”", "\"");
-                String reg = "(?i)(<aol:(\\w+)[^<]*?>)[^<]*?(</aol:\\2>)";
-                List<String> tags = RegularUtil.fetch(txt, reg);
-                for(String tag:tags){
-                    //标签name如<aol:img 中的img
-                    String name = RegularUtil.cut(tag, "aol:", " ");
-                    Tag instance = null;
-                    if("img".equalsIgnoreCase(name)){
-                        instance = new Img();
-                    }else if("date".equalsIgnoreCase(name)){
-                        instance = new DateFormat();
-                    }else if("number".equalsIgnoreCase(name)){
-                        instance = new NumberFormat();
-                    }else if("money".equalsIgnoreCase(name)){
-                        instance = new MoneyFormat();
-                    }else if("checkbox".equalsIgnoreCase(name)){
-                        instance = new CheckBox();
-                    }else if("if".equalsIgnoreCase(name)){
-                        instance = new If();
-                    }else if("set".equalsIgnoreCase(name)){
-                        instance = new Set();
-                    }
-                    String html = "";
-                    if(null != instance) {
-                        //复制占位值
-                        instance.init(this);
-                        //把 aol标签解析成html标签 下一步会解析html标签
-                        html = instance.parse(tag);
-                    }
-                    txt = txt.replace(tag, html);
-                }
-                System.out.println("解析:" + txt);
+                txt = parseTag(txt, variables);
                 t.setText(txt);
             }catch (Exception e){
                 e.printStackTrace();
             }
         }
+
+    }
+
+    public String parseTag(String txt, Map<String, Object> variables) throws Exception{
+        System.out.println("\n原文:"+txt);
+        txt = txt.replace("”", "\"");
+        String reg = "(?i)(<aol:(\\w+)[^<]*?>)[^<]*(</aol:\\2>)";
+        //这里 不要把内层标签独立拆出来，因为外层标签可能 会设置新变量值
+        List<String> tags = RegularUtil.fetch(txt, reg);
+        for(String tag:tags){
+            //标签name如<aol:img 中的img
+            String name = RegularUtil.cut(tag, "aol:", " ");
+            Tag instance = null;
+            //先执行外层的 外层需要设置新变量值
+            if("for".equalsIgnoreCase(name)){
+                instance = new For();
+            } else if("if".equalsIgnoreCase(name)){
+                instance = new If();
+            } else if("set".equalsIgnoreCase(name)){
+                instance = new Set();
+            } else if("img".equalsIgnoreCase(name)){
+                instance = new Img();
+            } else if("date".equalsIgnoreCase(name)){
+                instance = new DateFormat();
+            } else if("number".equalsIgnoreCase(name)){
+                instance = new NumberFormat();
+            } else if("money".equalsIgnoreCase(name)){
+                instance = new MoneyFormat();
+            } else if("checkbox".equalsIgnoreCase(name)){
+                instance = new CheckBox();
+            } else{
+                log.error("未识别的标签:{}", name);
+            }
+            String html = "";
+            if(null != instance) {
+                //复制占位值
+                instance.init(this);
+                instance.variable(variables);
+                //把 aol标签解析成html标签 下一步会解析html标签
+                html = instance.parse(tag);
+            }
+            txt = txt.replace(tag, html);
+            if(txt.contains("<aol:")){
+                txt = parseTag(txt, variables);
+            }
+        }
+        System.out.println("解析:" + txt);
+        return txt;
     }
 
     /**
@@ -643,37 +659,16 @@ public class WDocument extends WElement {
                 for (int i = 0; i < flags.size(); i++) {
                     String flag = flags.get(i);
                     String content = flag;
-                    String key = null;
-                    if (BasicUtil.checkEl(flag)) {
-                        key = flag.substring(2, flag.length() - 1);
-                        content = replaces.get(key);
-                        //exists = exists || replaces.containsKey(key);
-                        if (null == content) {
-                            //exists =  exists || replaces.containsKey(flag);
-                            content = replaces.get(flag);
-                        }
-                    } else if (flag.startsWith("{") && flag.endsWith("}")) {
-                        key = flag.substring(1, flag.length() - 1);
-                        //exists =  exists || replaces.containsKey(key);
+                    if(BasicUtil.checkEl(flag)) {
+                        String key = flag.substring(2, flag.length() - 1);
                         content = replaces.get(key);
                         if (null == content) {
-                            content = replaces.get(flag);
-                            //exists = exists || replaces.containsKey(flag);
-                        }
-                    } else {
-                        if (replaces.containsKey(flag)) {
-                            content = replaces.get(flag);
+                            Object var = BeanUtil.value(variables, key);
+                            if (null != var) {
+                                content = var.toString();
+                            }
                         }
                     }
-                    // boolean isblock = DocxUtil.isBlock(content);
-                    // Element p = t.getParent();
-                    /*if(null != key && DocxUtil.isEmpty(p, t) && !DocxUtil.hasParent(t,"tc")){
-                        prev = DocxUtil.prev(src, p);
-                        src.remove(p);
-                        List<Element> list = parseHtml(src, prev ,content);
-                    }else{
-                        List<Element> list = parseHtml(r, prev ,content);
-                    }*/
 
                     List<Element> list = parseHtml(r, prev, content);
                 }
