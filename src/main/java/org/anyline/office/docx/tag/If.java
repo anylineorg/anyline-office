@@ -8,7 +8,7 @@ import org.anyline.util.DefaultOgnlMemberAccess;
 import org.anyline.util.regular.RegularUtil;
 
 public class If extends AbstractTag implements Tag {
-    public String parse(String text){
+    public String parse(String text) throws Exception{
         String html = "";
         String test = RegularUtil.fetchAttributeValue(text, "test");
         String value = RegularUtil.fetchAttributeValue(text, "value");
