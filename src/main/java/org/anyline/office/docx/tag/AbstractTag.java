@@ -19,6 +19,7 @@ package org.anyline.office.docx.tag;
 import org.anyline.office.docx.entity.WDocument;
 import org.anyline.util.BasicUtil;
 import org.anyline.util.BeanUtil;
+import org.anyline.util.regular.RegularUtil;
 
 import java.io.File;
 import java.util.*;
@@ -110,6 +111,24 @@ public abstract class AbstractTag implements Tag{
             if(null == data){
                 data = txt_replaces.get(key);
             }
+
+            if(null == data){
+                if(key.contains(".")){
+                    //user.dept.name
+                    String[] ks = key.split("\\.");
+                    int size = ks.length;
+                    if(size > 1) {
+                        data = variables.get(ks[0]);
+                        for (int i = 1; i < size; i++) {
+                            String k = ks[i];
+                            if(null == data){
+                                break;
+                            }
+                            data = BeanUtil.getFieldValue(data, k);
+                        }
+                    }
+                }
+            }
         }else if(key.startsWith("{") && key.endsWith("}")){
             key = key.replace("{", "").replace("}", "");
             data = key;
@@ -161,6 +180,16 @@ public abstract class AbstractTag implements Tag{
                 value = "";
             }
             result = result.replace("${" + key + "}", value.toString());
+        }
+        //检测复合占位符
+        try {
+            List<String> ks = RegularUtil.fetch(text, "\\$\\{.*?\\}");
+            for(String k:ks){
+                Object value = data(k);
+                result = result.replace(k, value.toString());
+            }
+        }catch (Exception e){
+            e.printStackTrace();
         }
         if(null == result){
             result = "";

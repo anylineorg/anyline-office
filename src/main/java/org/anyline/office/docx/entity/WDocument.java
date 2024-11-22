@@ -27,6 +27,7 @@ import org.anyline.handler.Uploader;
 import org.anyline.log.Log;
 import org.anyline.log.LogProxy;
 import org.anyline.office.docx.tag.*;
+import org.anyline.office.docx.tag.Set;
 import org.anyline.office.docx.util.DocxUtil;
 import org.anyline.util.*;
 import org.anyline.util.regular.RegularUtil;
@@ -189,6 +190,7 @@ public class WDocument extends WElement {
         }
         return this;
     }
+
     public WDocument variable(String key, Object value){
         variables.put(key, value);
         return this;
@@ -229,6 +231,111 @@ public class WDocument extends WElement {
     }
     public LinkedHashMap<String, String> getTextReplaces(){
         return txt_replaces;
+    }
+
+
+    public Object data(String key){
+        Object data = key;
+        if(BasicUtil.checkEl(key)){
+            //${users}
+            key = key.substring(2, key.length() - 1);
+            data = variables.get(key);
+            if(null == data){
+                data = replaces.get(key);
+            }
+            if(null == data){
+                data = txt_replaces.get(key);
+            }
+
+            if(null == data){
+                if(key.contains(".")){
+                    //user.dept.name
+                    String[] ks = key.split("\\.");
+                    int size = ks.length;
+                    if(size > 1) {
+                        data = variables.get(ks[0]);
+                        for (int i = 1; i < size; i++) {
+                            String k = ks[i];
+                            if(null == data){
+                                break;
+                            }
+                            data = BeanUtil.getFieldValue(data, k);
+                        }
+                    }
+                }
+            }
+        }else if(key.startsWith("{") && key.endsWith("}")){
+            key = key.replace("{", "").replace("}", "");
+            data = key;
+            if(key.contains(",")){
+                String[] ks = key.split(",");
+                List<String> list = new ArrayList<>();
+                for(String k:ks){
+                    //{0:关,1:开}
+                    if(k.contains(":")){
+                        String[] kv = k.split(":");
+                        if(kv.length ==2){
+                            Map map = new HashMap();
+                            map.put(kv[0], kv[1]);
+                        }
+                    }else {
+                        //{FI,CO,HR}
+                        list.add(k);
+                    }
+                }
+                data = list;
+            }
+        }
+        if(null == data){
+            data = "";
+        }
+        return data;
+    }
+    /**
+     * 替换占位符
+     * @param text 原文
+     * @return String
+     */
+    public String placeholder(String text){
+        String result = text;
+        for(String key:replaces.keySet()){
+            String value = replaces.get(key);
+            if(null == value){
+                value = "";
+            }
+            result = result.replace("${" + key + "}", value);
+        }
+        for(String key:txt_replaces.keySet()){
+            String value = txt_replaces.get(key);
+            if(null == value){
+                value = "";
+            }
+            result = result.replace("${" + key + "}", value);
+        }
+        for(String key:variables.keySet()){
+            Object value = variables.get(key);
+            if(null == value){
+                value = "";
+            }
+            result = result.replace("${" + key + "}", value.toString());
+        }
+        //检测复合占位符
+        try {
+            List<String> ks = RegularUtil.fetch(text, "\\$\\{.*?\\}");
+            for(String k:ks){
+                Object value = data(k);
+                if(null == value){
+                    value = "";
+                }
+                result = result.replace(k, value.toString());
+            }
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+        if(null == result){
+            result = "";
+        }
+        return result;
     }
     public void save(){
         save(Charset.forName("UTF-8"));
@@ -294,7 +401,7 @@ public class WDocument extends WElement {
         for(int i = 0; i < size; i++){
             Element t = ts.get(i);
             String txt = t.getTextTrim();
-            System.out.println(txt);
+            System.out.println("\n原文:"+txt);
             if(txt.startsWith("<")){
                 //TODO 解析被拆分的标签
                 List<Element> starts = completion(ts, i+1, "aol");
@@ -308,7 +415,7 @@ public class WDocument extends WElement {
             }
             try {
                 txt = txt.replace("”", "\"");
-                String reg = "(?i)(<aol:(\\w+)[^<]*?>)\\s*(</aol:\\2>)";
+                String reg = "(?i)(<aol:(\\w+)[^<]*?>)[^<]*?(</aol:\\2>)";
                 List<String> tags = RegularUtil.fetch(txt, reg);
                 for(String tag:tags){
                     //标签name如<aol:img 中的img
@@ -320,16 +427,25 @@ public class WDocument extends WElement {
                         instance = new DateFormat();
                     }else if("number".equalsIgnoreCase(name)){
                         instance = new NumberFormat();
+                    }else if("money".equalsIgnoreCase(name)){
+                        instance = new MoneyFormat();
                     }else if("checkbox".equalsIgnoreCase(name)){
                         instance = new CheckBox();
+                    }else if("if".equalsIgnoreCase(name)){
+                        instance = new If();
+                    }else if("set".equalsIgnoreCase(name)){
+                        instance = new Set();
                     }
-                    //复制占位值
-                    instance.init(this);
-                    //把 aol标签解析成html标签 下一步会解析html标签
-                    String html = instance.parse(txt);
+                    String html = "";
+                    if(null != instance) {
+                        //复制占位值
+                        instance.init(this);
+                        //把 aol标签解析成html标签 下一步会解析html标签
+                        html = instance.parse(tag);
+                    }
                     txt = txt.replace(tag, html);
                 }
-                System.out.println("parse result:" + txt);
+                System.out.println("解析:" + txt);
                 t.setText(txt);
             }catch (Exception e){
                 e.printStackTrace();
@@ -357,7 +473,7 @@ public class WDocument extends WElement {
         return list;
     }
     /**
-     * 合并点位符 ${key} 拆分到3个t中的情况
+     * 合并占位符 ${key} 拆分到3个t中的情况
      * 调用完replace后再调用当前方法，因为需要用到replace里提供的占位符列表
      */
     public void mergePlaceholder(){
@@ -366,7 +482,7 @@ public class WDocument extends WElement {
         mergePlaceholder(placeholders);
     }
     /**
-     * 合并点位符 ${key} 拆分到3个t中的情况
+     * 合并占位符 ${key} 拆分到3个t中的情况
      * @param placeholders 占位符列表 带不还${}都可以 最终会处理掉${}
      */
     public void mergePlaceholder(List<String> placeholders){
@@ -515,33 +631,42 @@ public class WDocument extends WElement {
             if(index < elements.size()-1){
                 prev = elements.get(index+1);
             }
+            //是否存在占位符
             boolean exists = false;
-            for(int i=0; i<flags.size(); i++){
-                String flag = flags.get(i);
-                String content = flag;
-                String key = null;
-                if(flag.startsWith("${") && flag.endsWith("}")) {
-                    key = flag.substring(2, flag.length() - 1);
-                    content = replaces.get(key);
-                    exists = exists || replaces.containsKey(key);
-                    if(null == content){
-                        exists =  exists || replaces.containsKey(flag);
-                        content = replaces.get(flag);
-                    }
-                }else if(flag.startsWith("{") && flag.endsWith("}")){
-                    key = flag.substring(1, flag.length() - 1);
-                    content = replaces.get(key);
-                    exists =  exists || replaces.containsKey(key);
-                    if(null == content){
-                        content = replaces.get(flag);
-                        exists = exists || replaces.containsKey(flag);
-                    }
-                }else{
-                    content = replaces.get(flag);
-                    exists =  exists || replaces.containsKey(flag);
+            for(String flag:flags){
+                if(BasicUtil.checkEl(flag)){
+                    exists = true;
+                    break;
                 }
-                // boolean isblock = DocxUtil.isBlock(content);
-                // Element p = t.getParent();
+            }
+            if(exists) {
+                for (int i = 0; i < flags.size(); i++) {
+                    String flag = flags.get(i);
+                    String content = flag;
+                    String key = null;
+                    if (BasicUtil.checkEl(flag)) {
+                        key = flag.substring(2, flag.length() - 1);
+                        content = replaces.get(key);
+                        //exists = exists || replaces.containsKey(key);
+                        if (null == content) {
+                            //exists =  exists || replaces.containsKey(flag);
+                            content = replaces.get(flag);
+                        }
+                    } else if (flag.startsWith("{") && flag.endsWith("}")) {
+                        key = flag.substring(1, flag.length() - 1);
+                        //exists =  exists || replaces.containsKey(key);
+                        content = replaces.get(key);
+                        if (null == content) {
+                            content = replaces.get(flag);
+                            //exists = exists || replaces.containsKey(flag);
+                        }
+                    } else {
+                        if (replaces.containsKey(flag)) {
+                            content = replaces.get(flag);
+                        }
+                    }
+                    // boolean isblock = DocxUtil.isBlock(content);
+                    // Element p = t.getParent();
                     /*if(null != key && DocxUtil.isEmpty(p, t) && !DocxUtil.hasParent(t,"tc")){
                         prev = DocxUtil.prev(src, p);
                         src.remove(p);
@@ -549,12 +674,10 @@ public class WDocument extends WElement {
                     }else{
                         List<Element> list = parseHtml(r, prev ,content);
                     }*/
-                if(null != content) {
+
                     List<Element> list = parseHtml(r, prev, content);
                 }
-            }
-            //如果存在占位符 删除原内容
-            if(exists) {
+                //如果存在占位符 删除原内容
                 elements.remove(t);
             }
         }
@@ -1496,7 +1619,7 @@ public class WDocument extends WElement {
                 subfix = "jpeg";
             }
         }
-        //点位符
+        //占位符
         if(src.startsWith("${")){
             String key = src.substring(2, src.length() - 1);
             src = replaces.get(key);
