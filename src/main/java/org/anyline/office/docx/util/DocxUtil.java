@@ -426,7 +426,7 @@ public class DocxUtil {
     }
     /**
      * 拆分关键字
-     * 拆分123${key}abc成多个w:t
+     * 拆分123${key}abc成多个w:t   abc,${key},123 最后执行解析时再反转顺序
      * @param txt txt
      * @param regex 正则
      * @return List
@@ -449,6 +449,8 @@ public class DocxUtil {
                     list.addAll(splitKey(t1));
                 }
                 //txt = txt.substring(0, txt.length() - key.length());
+            }else{
+                list.add(txt);
             }
         } catch (Exception e) {
             e.printStackTrace();
