@@ -11,8 +11,7 @@ public class MoneyFormat extends AbstractTag implements Tag{
         String result = "";
         //<aol:money value="${total}"></aol:money>
         String key = RegularUtil.fetchAttributeValue(text, "value");
-        String format = RegularUtil.fetchAttributeValue(text, "format");
-        if(BasicUtil.isEmpty(key) || BasicUtil.isEmpty(format)){
+        if(BasicUtil.isEmpty(key)){
             return "";
         }
         Object data = data(key.trim());
