@@ -18,10 +18,14 @@ package org.anyline.office.docx.tag;
 
 import org.anyline.office.docx.entity.WDocument;
 
+import java.util.Map;
+
 public interface Tag {
     void init(WDocument doc);
-    String parse(String text, Status status);
-    default String parse(String text){
+    void variable(String key, Object value);
+    void variable(Map<String, Object> values);
+    String parse(String text, Status status) throws Exception;
+    default String parse(String text) throws Exception{
         return parse(text, null);
     }
 }
