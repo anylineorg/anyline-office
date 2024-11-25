@@ -425,9 +425,9 @@ public class WDocument extends WElement {
     public String parseTag(String txt, Map<String, Object> variables) throws Exception{
         System.out.println("\n原文:"+txt);
         txt = txt.replace("”", "\"");
-        String reg = "(?i)(<aol:(\\w+)[^<]*?>)[^<]*(</aol:\\2>)";
-        //这里 不要把内层标签独立拆出来，因为外层标签可能 会设置新变量值
-        List<String> tags = RegularUtil.fetch(txt, reg);
+        //String reg = "(?i)(<aol:(\\w+)[^<]*?>)[^<]*(</aol:\\2>)";
+        //这里 不要把内层标签独立拆出来，因为外层标签可能 会设置新变量值影响内层
+        List<String> tags = RegularUtil.fetchOutTag(txt);
         for(String tag:tags){
             //标签name如<aol:img 中的img
             String name = RegularUtil.cut(tag, "aol:", " ");
@@ -460,7 +460,8 @@ public class WDocument extends WElement {
                 //把 aol标签解析成html标签 下一步会解析html标签
                 html = instance.parse(tag);
             }
-            txt = txt.replace(tag, html);
+            //txt = txt.replace(tag, html);
+            txt = BasicUtil.replaceFirst(txt, tag, html);
             if(txt.contains("<aol:")){
                 txt = parseTag(txt, variables);
             }
