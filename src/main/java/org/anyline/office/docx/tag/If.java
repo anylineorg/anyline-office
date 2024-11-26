@@ -47,11 +47,16 @@ public class If extends AbstractTag implements Tag {
         }
         if(chk){
             if(BasicUtil.isNotEmpty(value)){
+                //如果有value值
                 html = value;
             } else {
                 //test中会有>影响表达式
                 text = text.replace(test, "");
-                html = RegularUtil.fetchTagBody(text, "aol:if");
+                String body = RegularUtil.fetchTagBody(text, "aol:if");
+                if(body.contains("<aol:")){
+                    body = doc.parseTag(body, variables);
+                }
+                html = body;
             }
         }else{
             html = elseValue;
