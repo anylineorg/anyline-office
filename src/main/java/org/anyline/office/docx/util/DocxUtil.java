@@ -358,6 +358,10 @@ public class DocxUtil {
         if(null == ref || null == src){
             return;
         }
+        if(src == ref){
+            //ref取父标签后可能与src一样
+            return;
+        }
         // 同级
         if(ref.getParent() == src.getParent()){
             List<Element> elements = ref.getParent().elements();
