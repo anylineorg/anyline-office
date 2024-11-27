@@ -36,6 +36,9 @@ public class For extends AbstractTag implements Tag {
     public String parse(String text) throws Exception {
         StringBuilder html = new StringBuilder();
         String items_key = RegularUtil.fetchAttributeValue(text, "items");
+        if(null == items_key){
+            items_key = RegularUtil.fetchAttributeValue(text, "data");
+        }
         if(null != items_key) {
             items = data(items_key);
         }
@@ -44,13 +47,14 @@ public class For extends AbstractTag implements Tag {
         begin = BasicUtil.parseInt(RegularUtil.fetchAttributeValue(text, "begin"), 0);
         end = BasicUtil.parseInt(RegularUtil.fetchAttributeValue(text, "end"));
         String body = RegularUtil.fetchTagBody(text, "aol:for", true);
-        if(null != items) {
+        if(null != items) {//遍历集合
             if (items instanceof Collection) {
                 Collection list = (Collection) items;
                 int index = 0;
                 Map<String, Object> map = new HashMap<>();
                 for (Object item : list) {
                     if (null != begin && index < begin) {
+                        index++;
                         continue;
                     }
                     if (null != end && index > end) {
@@ -65,7 +69,7 @@ public class For extends AbstractTag implements Tag {
                     index++;
                 }
             }
-        }else{
+        }else{//按计数遍历
             if(null != end){
                 Map<String, Object> map = new HashMap<>();
                 int index = 0;
