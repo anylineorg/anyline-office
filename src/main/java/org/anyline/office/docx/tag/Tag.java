@@ -24,8 +24,5 @@ public interface Tag {
     void init(WDocument doc);
     void variable(String key, Object value);
     void variable(Map<String, Object> values);
-    String parse(String text, Status status) throws Exception;
-    default String parse(String text) throws Exception{
-        return parse(text, null);
-    }
+    String parse(String text) throws Exception;
 }
