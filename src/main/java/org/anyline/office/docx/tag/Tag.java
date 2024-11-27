@@ -17,6 +17,8 @@
 package org.anyline.office.docx.tag;
 
 import org.anyline.office.docx.entity.WDocument;
+import org.anyline.office.docx.entity.WText;
+import org.dom4j.Element;
 
 import java.util.Map;
 
@@ -25,4 +27,6 @@ public interface Tag {
     void variable(String key, Object value);
     void variable(Map<String, Object> values);
     String parse(String text) throws Exception;
+    Element wt();
+    void wt(Element wt);
 }
