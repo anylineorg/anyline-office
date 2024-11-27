@@ -20,6 +20,7 @@ import org.anyline.office.docx.entity.WDocument;
 import org.anyline.util.BasicUtil;
 import org.anyline.util.BeanUtil;
 import org.anyline.util.regular.RegularUtil;
+import org.dom4j.Element;
 
 import java.io.File;
 import java.util.*;
@@ -27,6 +28,7 @@ import java.util.*;
 public abstract class AbstractTag implements Tag{
     protected List<Tag> children = new ArrayList<>();
     protected WDocument doc;
+    protected Element wt;
     protected LinkedHashMap<String, String> replaces = new LinkedHashMap<>();
     /**
      * 与replaces不同的是values中可以包含复杂结构
@@ -48,6 +50,12 @@ public abstract class AbstractTag implements Tag{
     }
     public void variable(Map<String, Object> values) {
         variables.putAll(values);
+    }
+    public void wt(Element wt){
+        this.wt = wt;
+    }
+    public Element wt(){
+        return wt;
     }
     /**
      * 设置占位符替换值 在调用save时执行替换<br/>
@@ -97,7 +105,7 @@ public abstract class AbstractTag implements Tag{
     public LinkedHashMap<String, Object> variables(){
         return variables;
     }
-    public String parse(String text, Status status){
+    public String parse(String text) throws Exception{
         return text;
     }
 
