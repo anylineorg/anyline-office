@@ -419,6 +419,11 @@ public class WDocument extends WElement {
                 e.printStackTrace();
             }
         }
+        System.out.println("=================parse tag======================");
+        for(Element t:ts){
+            System.out.println("["+t.getTextTrim()+"]");
+        }
+        System.out.println("=================parse tag======================");
 
     }
 
@@ -462,9 +467,10 @@ public class WDocument extends WElement {
             }
             //txt = txt.replace(tag, html);
             txt = BasicUtil.replaceFirst(txt, tag, html);
-            if(txt.contains("<aol:")){
+            //如果有子标签 应该在父标签中一块解析完
+            /*if(txt.contains("<aol:")){
                 txt = parseTag(txt, variables);
-            }
+            }*/
         }
         System.out.println("解析:" + txt);
         return txt;
@@ -629,6 +635,13 @@ public class WDocument extends WElement {
     }
     /**
      * 执行替换
+     * 替换后内容分类<br/>
+     * 1.纯文本直接替换<br/>
+     * 2.inline不带样式 去掉box与1一样处理<br/>
+     * 3.inline带样式 创建新r rPr后填充内容<br/>
+     * 4.block 注意有可能需要创建新p r 需要区分父标签的tc还是p<br/>
+     * 5.混合 需要先拆分开<br/>
+     *
      * @param box 最外层元素
      * @param replaces k:v
      */
@@ -636,6 +649,9 @@ public class WDocument extends WElement {
         List<Element> ts = DomUtil.elements(box, "t");
         for(Element t:ts){
             String txt = t.getTextTrim();
+            System.out.println("[replace src][txt:"+txt+"]");
+
+            ts = DomUtil.elements(box, "t");
             List<String> flags = DocxUtil.splitKey(txt);
             if(flags.size() == 0){
                 continue;
@@ -645,42 +661,95 @@ public class WDocument extends WElement {
             List<Element> elements = r.elements();
             int index = elements.indexOf(t);
             Element prev = null;
-            if(index < elements.size()-1){
-                prev = elements.get(index+1);
+            if(index > 0 && index < elements.size()-1){
+                prev = elements.get(index-1);
             }
             //是否存在占位符
-            boolean exists = false;
+            boolean exists_placeholder = false;
             for(String flag:flags){
                 if(BasicUtil.checkEl(flag)){
-                    exists = true;
+                    exists_placeholder = true;
                     break;
                 }
             }
-            if(exists) {
-                for (int i = 0; i < flags.size(); i++) {
-                    String flag = flags.get(i);
-                    String content = flag;
+            if(exists_placeholder) {
+                //检测是否纯文本，如果是直接替换不需要解析标签
+                boolean all_txt = true;
+                for(String flag:flags){
                     if(BasicUtil.checkEl(flag)) {
                         String key = flag.substring(2, flag.length() - 1);
-                        content = replaces.get(key);
+                        String content = replaces.get(key);
                         if (null == content) {
                             Object var = BeanUtil.value(variables, key);
                             if (null != var) {
                                 content = var.toString();
                             }
                         }
+                        if(null != content && content.contains("<") && content.contains(">")){
+                            all_txt = false;
+                            break;
+                        }
                     }
-
-                    List<Element> list = parseHtml(r, prev, content);
                 }
-                //如果存在占位符 删除原内容
-                elements.remove(t);
+                if(all_txt){
+                    StringBuilder builder = new StringBuilder();
+                    for(String flag:flags){
+                        String content = flag;
+                        if (BasicUtil.checkEl(flag)) {
+                            String key = flag.substring(2, flag.length() - 1);
+                            content = replaces.get(key);
+                            if (null == content) {
+                                Object var = BeanUtil.value(variables, key);
+                                if (null != var) {
+                                    content = var.toString();
+                                }
+                            }
+                        }
+                        if(null != content){
+                            builder.append(content);
+                        }
+                    }
+                    t.setText(builder.toString());
+                }else {
+                    //有标签需要解析
+                    //如果存在占位符 删除原内容 再重新添加新内容
+                    elements.remove(t);
+                    for (int i = 0; i < flags.size(); i++) {
+                        String flag = flags.get(i);
+                        String content = flag;
+                        if (BasicUtil.checkEl(flag)) {
+                            String key = flag.substring(2, flag.length() - 1);
+                            content = replaces.get(key);
+                            if (null == content) {
+                                Object var = BeanUtil.value(variables, key);
+                                if (null != var) {
+                                    content = var.toString();
+                                }
+                            }
+                        }
+                        System.out.println("-----------------------replace:flag"+flag+"-----------------------");
+                        for(Element tt:ts){
+                            System.out.println("["+tt.getTextTrim()+"]");
+                        }
+                        System.out.println("-----------------------replace:content"+content+"-----------------------");
+                        List<Element> list = parseHtml(r, prev, content);
+                        if(!list.isEmpty()){
+                            prev = list.get(list.size()-1);
+                        }
+                    }
+                }
             }
         }
         List<Element> bookmarks = DomUtil.elements(box, "bookmarkStart");
         for(Element bookmark:bookmarks){
             replaceBookmark(bookmark, replaces);
         }
+        ts = DomUtil.elements(box, "t");
+        System.out.println("=================replace======================");
+        for(Element t:ts){
+            System.out.println("["+t.getTextTrim()+"]");
+        }
+        System.out.println("=================replace======================");
     }
     /**
      * 合并列的表格,如果没有设置宽度,在wps中只占一列,需要在表格中根据总列数添加
@@ -1087,7 +1156,8 @@ public class WDocument extends WElement {
             html = "<root>" + html + "</root>";
             org.dom4j.Document doc = DocumentHelper.parseText(html);
             Element root = doc.getRootElement();
-            parseHtml(box, prev, root, null, true);
+            Element parse = parseHtml(box, prev, root, null, true);
+            list.add(parse);
             //提取出新添加的elements
             int size = root.elements().size();
             List<Element> elements = box.elements();
@@ -1345,7 +1415,6 @@ public class WDocument extends WElement {
                 Element prevR = prevStyle(prev);
                 DocxUtil.copyStyle(r, prevR, true);
             }
-
             DocxUtil.after(r, prev);
         }else if(pname.equalsIgnoreCase("body")){
             Element p = parent.addElement("w:p");
@@ -1362,7 +1431,10 @@ public class WDocument extends WElement {
             text = HtmlUtil.display(text);
         }
         t.setText(text.trim());
-        return r;
+        if(prev.getParent() == t.getParent()) {
+            DocxUtil.after(t, prev);
+        }
+        return t;
     }
     // 前一个样式
     public Element prevStyle(Element prev){
@@ -1798,6 +1870,9 @@ public class WDocument extends WElement {
         prstGeom.addElement("a:avLst");
 
         DocxUtil.after(r, prev);
+        if(prev.getParent() == r){
+            DocxUtil.after(draw, prev);
+        }
         return r;
 
     }
@@ -1829,8 +1904,8 @@ public class WDocument extends WElement {
                 String text = node.getText().trim();
                 if(text.length()>0) {
                     empty = false;
-                    Element r = inline(parent, prev, text, styles, copyPrevStyle);
-                    prev = r;
+                    Element t = inline(parent, prev, text, styles, copyPrevStyle);
+                    prev = t;
                 }
             }else if(type == 1 ) {//element
                 empty = false;
