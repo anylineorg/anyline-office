@@ -99,19 +99,32 @@ public class WTr extends WElement {
      * @param bookmark 书签或占位符 包含{和}的按占位符搜索
      * @return wtr
      */
-    public WTc tc(String bookmark){
+    public WTc tc(Bookmark bookmark){
         List<WTc> tcs = tcs(bookmark);
         if(!tcs.isEmpty()){
             return tcs.get(0);
         }
         return null;
     }
-    public List<WTc> tcs(String bookmark){
+    public List<WTc> tcs(Bookmark bookmark){
         List<WTc> list = new ArrayList<>();
         if(null != bookmark) {
+            String name = bookmark.getName();
             for(WTc item:wtcs){
                 String txt = item.getTexts();
-                if(txt.contains(bookmark)){
+                if(txt.contains(name)){
+                    list.add(item);
+                }
+            }
+        }
+        return list;
+    }
+    public List<WTc> tcs(String keyword){
+        List<WTc> list = new ArrayList<>();
+        if(null != keyword) {
+            for(WTc item:wtcs){
+                String txt = item.getTexts();
+                if(txt.contains(keyword)){
                     list.add(item);
                 }
             }
