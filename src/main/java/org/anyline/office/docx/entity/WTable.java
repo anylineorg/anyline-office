@@ -29,6 +29,7 @@ import org.dom4j.Element;
 import java.util.*;
 
 public class WTable extends WElement {
+    private WTc parent; //嵌套表格
     private String widthUnit = "px";     // 默认长度单位 px pt cm/厘米
     private List<WTr> wtrs = new ArrayList<>();
     //是否自动同步(根据word源码重新构造 wtable wtr wtc)
@@ -60,20 +61,21 @@ public class WTable extends WElement {
      * @param bookmark 书签或占位符 包含{和}的按占位符搜索
      * @return wtr
      */
-    public WTr tr(String bookmark){
+    public WTr tr(Bookmark bookmark){
         List<WTr> trs = trs(bookmark);
         if(!trs.isEmpty()){
             return trs.get(0);
         }
         return null;
     }
-    public List<WTr> trs(String bookmark){
+    public List<WTr> trs(Bookmark bookmark){
         List<WTr> list = new ArrayList<>();
         if(null != bookmark) {
-            if(bookmark.contains("{") && bookmark.contains("}")){
+            String name = bookmark.getName();
+            if(name.contains("{") && name.contains("}")){
                 for(WTr item:wtrs){
                     String txt = item.getTexts();
-                    if(txt.contains(bookmark)){
+                    if(txt.contains(name)){
                         list.add(item);
                     }
                 }
@@ -91,14 +93,14 @@ public class WTable extends WElement {
      * @param bookmark 书签或占位符 包含{和}的按占位符搜索
      * @return wtr
      */
-    public WTc tc(String bookmark){
+    public WTc tc(Bookmark bookmark){
         List<WTc> tcs = tcs(bookmark);
         if(!tcs.isEmpty()){
             return tcs.get(0);
         }
         return null;
     }
-    public List<WTc> tcs(String bookmark){
+    public List<WTc> tcs(Bookmark bookmark){
         List<WTc> list = new ArrayList<>();
         if(null != bookmark) {
             for(WTr item:wtrs){
@@ -108,7 +110,7 @@ public class WTable extends WElement {
         return list;
     }
 
-    public Element parent(String bookmark, String tag){
+    public Element parent(Bookmark bookmark, String tag){
         return root.parent(bookmark, tag);
     }
 
