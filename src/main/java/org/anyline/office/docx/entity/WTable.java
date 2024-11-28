@@ -31,10 +31,18 @@ import java.util.*;
 public class WTable extends WElement {
     private WTc parent; //嵌套表格
     private String widthUnit = "px";     // 默认长度单位 px pt cm/厘米
+    private static Map<Element, WTable> map = new HashMap<>();
     private List<WTr> wtrs = new ArrayList<>();
     //是否自动同步(根据word源码重新构造 wtable wtr wtc)
     //在大批量操作时需要关掉自动同步,在操作完成后调用一次 reload()
     private boolean isAutoLoad = true;
+
+    public static WTable table(Element src){
+        if(null == src){
+            return null;
+        }
+        return map.get(src);
+    }
     public WTable(WDocument doc){
         this.root = doc;
         load();
@@ -48,6 +56,7 @@ public class WTable extends WElement {
         load();
     }
     private void load(){
+        map.put(src, this);
         wtrs.clear();
         List<Element> elements = src.elements("tr");
         for(Element element:elements){
@@ -306,6 +315,10 @@ public class WTable extends WElement {
         Integer index = null;
         insert(index, tds);
     }
+    /**
+     * 追加行,并填充内容
+     * @param tds 每列的文本 数量多于表格列的 条目无效
+     */
     public void append(String ... tds){
         Integer index = null;
         insert(index, tds);
