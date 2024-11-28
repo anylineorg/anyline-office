@@ -54,7 +54,7 @@ public class If extends AbstractTag implements Tag {
                 text = text.replace(test, "");
                 String body = RegularUtil.fetchTagBody(text, "aol:if");
                 if(body.contains("<aol:")){
-                    body = doc.parseTag(body, variables);
+                    body = doc.parseTag(wt, body, variables);
                 }
                 html = body;
             }
