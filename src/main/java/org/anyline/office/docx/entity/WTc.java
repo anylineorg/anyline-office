@@ -37,6 +37,14 @@ public class WTc extends WElement {
     private String widthUnit = "px";     // 默认长度单位 px pt cm/厘米
     private int colspan = -1; //-1:未设置  1:不合并  0:被合并  >1:合并其他单元格
     private int rowspan = -1;
+    private static Map<Element, WTc> map = new HashMap<>();
+
+    public static WTc tc(Element src){
+        if(null == src){
+            return null;
+        }
+        return map.get(src);
+    }
     public WTc(WDocument doc, WTr parent, Element src){
         this.root = doc;
         this.src = src;
@@ -47,6 +55,7 @@ public class WTc extends WElement {
         load();
     }
     private WTc load(){
+        map.put(src, this);
         wps.clear();
         List<Element> ps = src.elements("p");
         for(Element p:ps){
