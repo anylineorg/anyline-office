@@ -22,17 +22,24 @@ package org.anyline.office.docx.entity;
 import org.anyline.handler.Uploader;
 import org.anyline.office.docx.util.DocxUtil;
 import org.anyline.util.BasicUtil;
+import org.anyline.util.HtmlUtil;
+import org.dom4j.DocumentHelper;
 import org.dom4j.Element;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.List;
+import java.util.*;
 
 public class WTr extends WElement {
     private WTable parent;
     private List<WTc> wtcs = new ArrayList<>();
+    private static Map<Element, WTr> map = new HashMap<>();
     private String widthUnit = "px";     // 默认长度单位 px pt cm/厘米
+
+    public static WTr tr(Element src){
+        if(null == src){
+            return null;
+        }
+        return map.get(src);
+    }
     public WTr(WDocument doc, WTable parent, Element src){
         this.root = doc;
         this.src = src;
@@ -44,6 +51,7 @@ public class WTr extends WElement {
         load();
     }
     private WTr load(){
+        map.put(src, this);
         wtcs.clear();
         List<Element> items = src.elements("tc");
         for(Element tc:items){
@@ -130,6 +138,106 @@ public class WTr extends WElement {
             }
         }
         return list;
+    }
+
+    /**
+     * 在最后位置插入一列
+     * @param html html.td源码
+     */
+    public void insert(String html){
+        Integer index = null;
+        insert(index, html);
+    }
+    public void append(String html){
+        insert(html);
+    }
+    /**
+     * 在index位置插入1列,以原来index位置行为模板,原来index位置以下列的挤到下一列
+     * @param index 插入位置下标 负数表示倒数第index列 插入 null表示从最后追加与append效果一致
+     * @param html html内容
+     */
+    public void insert(Integer index, String html){
+        WTc template = template(index); //取原来在当前位置的一行作模板
+        insert(index, template, html);
+    }
+
+    /**
+     * 根据模版样式 插入列
+     * @param index 插入位置下标 负数表示倒数 插入 null表示从最后追加与append效果一致
+     * @param template 模版列
+     * @param html html片段 片段中应该有多个td,不需要上级标签tr,如果没有td则插入一列
+     */
+    public void insert(Integer index, WTc template, String html){
+        List<Element> tcs = src.elements("tc");
+        int idx = index(index, tcs.size());
+        try {
+            if(root.IS_HTML_ESCAPE){
+                html = HtmlUtil.name2code(html);
+            }
+            if(!html.contains("<td")){
+                html = "<td>" + html  + "</td>";
+            }
+            org.dom4j.Document doc = DocumentHelper.parseText("<root>"+html+"</root>");
+            Element root = doc.getRootElement();
+            List<Element> tds = root.elements("td");
+            for(Element td:tds){
+                Element newTc = null;
+                if(null != template) {
+                    newTc = tc(template, td).getSrc();
+                }else{
+                    newTc = tc(td).getSrc();
+                    tcs.remove(newTc);
+                }
+                if(null == index){
+                    tcs.add(newTc);
+                }else {
+                    tcs.add(idx++, newTc);
+                }
+            }
+            if(this.parent.isAutoLoad()) {
+                reload();
+            }
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * 创建行 并复制模板样式
+     * @param template 模板
+     * @param src 根据src创建(html标签)
+     * @return tc
+     */
+    private WTc tc(WTc template, Element src){
+        WTc tc = new WTc(root, this, template.getSrc().createCopy());
+        tc.removeContent();
+        String txt = src.getTextTrim();
+        tc.setText(txt);
+        return tc;
+    }
+    private WTc tc(Element src){
+        Element tc = this.src.addElement("w:tc");
+        WTc wtc = new WTc(this.root, this, tc);
+        wtc.setHtml(src.getTextTrim());
+        return wtc;
+    }
+    /**
+     * 获取模板列
+     * @param index 插入位置下标 负数表示倒数第index列
+     * @return Wtr
+     */
+    public WTc template(Integer index){
+        WTc template = null;
+        int size = wtcs.size();
+        if(size>0){
+            if(null == index){
+                template = wtcs.get(size-1);
+            }else {
+                index = index(index, size);
+                template = wtcs.get(index);
+            }
+        }
+        return template;
     }
     /**
      * 获取单元格,计算合并列
@@ -509,7 +617,6 @@ public class WTr extends WElement {
         }
         return this;
     }
-
 
     /**
      * 复制一行
