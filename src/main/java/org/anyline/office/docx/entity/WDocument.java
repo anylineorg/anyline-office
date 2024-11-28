@@ -413,22 +413,19 @@ public class WDocument extends WElement {
 
             }
             try {
-                txt = parseTag(txt, variables);
+                txt = parseTag(t, txt, variables);
                 t.setText(txt);
             }catch (Exception e){
                 e.printStackTrace();
             }
         }
-        System.out.println("=================parse tag======================");
-        for(Element t:ts){
-            System.out.println("["+t.getTextTrim()+"]");
-        }
-        System.out.println("=================parse tag======================");
 
     }
 
-    public String parseTag(String txt, Map<String, Object> variables) throws Exception{
-        System.out.println("\n原文:"+txt);
+    public String parseTag(Element t, String txt, Map<String, Object> variables) throws Exception{
+        if(null == txt){
+            return "";
+        }
         txt = txt.replace("”", "\"");
         //String reg = "(?i)(<aol:(\\w+)[^<]*?>)[^<]*(</aol:\\2>)";
         //这里 不要把内层标签独立拆出来，因为外层标签可能 会设置新变量值影响内层
@@ -461,6 +458,7 @@ public class WDocument extends WElement {
             if(null != instance) {
                 //复制占位值
                 instance.init(this);
+                instance.wt(t);
                 instance.variable(variables);
                 //把 aol标签解析成html标签 下一步会解析html标签
                 html = instance.parse(tag);
@@ -472,7 +470,6 @@ public class WDocument extends WElement {
                 txt = parseTag(txt, variables);
             }*/
         }
-        System.out.println("解析:" + txt);
         return txt;
     }
 
@@ -649,7 +646,6 @@ public class WDocument extends WElement {
         List<Element> ts = DomUtil.elements(box, "t");
         for(Element t:ts){
             String txt = t.getTextTrim();
-            System.out.println("[replace src][txt:"+txt+"]");
 
             ts = DomUtil.elements(box, "t");
             List<String> flags = DocxUtil.splitKey(txt);
@@ -727,11 +723,6 @@ public class WDocument extends WElement {
                                 }
                             }
                         }
-                        System.out.println("-----------------------replace:flag"+flag+"-----------------------");
-                        for(Element tt:ts){
-                            System.out.println("["+tt.getTextTrim()+"]");
-                        }
-                        System.out.println("-----------------------replace:content"+content+"-----------------------");
                         List<Element> list = parseHtml(r, prev, content);
                         if(!list.isEmpty()){
                             prev = list.get(list.size()-1);
@@ -744,12 +735,6 @@ public class WDocument extends WElement {
         for(Element bookmark:bookmarks){
             replaceBookmark(bookmark, replaces);
         }
-        ts = DomUtil.elements(box, "t");
-        System.out.println("=================replace======================");
-        for(Element t:ts){
-            System.out.println("["+t.getTextTrim()+"]");
-        }
-        System.out.println("=================replace======================");
     }
     /**
      * 合并列的表格,如果没有设置宽度,在wps中只占一列,需要在表格中根据总列数添加
@@ -947,12 +932,12 @@ public class WDocument extends WElement {
      * @param tag 上一级标签名 如tbl
      * @return Element
      */
-    public Element parent(String bookmark, String tag){
+    public Element parent(Bookmark bookmark, String tag){
         load();
-        Element bk = DocxUtil.bookmark(doc.getRootElement(), bookmark);
+        Element bk = DocxUtil.bookmark(doc.getRootElement(), bookmark.getName());
         return DocxUtil.getParent(bk, tag);
     }
-    public Element parent(String bookmark){
+    public Element parent(Bookmark bookmark){
         return parent(bookmark, null);
     }
 
@@ -961,7 +946,7 @@ public class WDocument extends WElement {
      * @param bookmark 书签
      * @return docx table
      */
-    public WTable table(String bookmark){
+    public WTable table(Bookmark bookmark){
         Element src = parent(bookmark, "tbl");
         if(null != src) {
             return new WTable(this, src);
