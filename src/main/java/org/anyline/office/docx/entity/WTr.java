@@ -201,7 +201,13 @@ public class WTr extends WElement {
             e.printStackTrace();
         }
     }
-
+    public void remove(WTc wtc){
+        wtcs.remove(wtc);
+        getTcs().remove(wtc.getSrc());
+    }
+    public void remove(Element tc){
+        remove(tc(tc));
+    }
     /**
      * 创建行 并复制模板样式
      * @param template 模板
