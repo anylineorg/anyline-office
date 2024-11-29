@@ -19,15 +19,23 @@ package org.anyline.office.docx.tag;
 import ognl.Ognl;
 import ognl.OgnlContext;
 import ognl.OgnlException;
+import org.anyline.office.docx.entity.WTable;
+import org.anyline.office.docx.entity.WTr;
+import org.anyline.office.docx.util.DocxUtil;
 import org.anyline.util.BasicUtil;
 import org.anyline.util.DefaultOgnlMemberAccess;
 import org.anyline.util.regular.RegularUtil;
+import org.dom4j.Element;
 
 public class If extends AbstractTag implements Tag {
     public String parse(String text) throws Exception{
         String html = "";
         String test = RegularUtil.fetchAttributeValue(text, "test");
         String value = RegularUtil.fetchAttributeValue(text, "value");
+        //false时是否删除
+        boolean remove = BasicUtil.parseBoolean(RegularUtil.fetchAttributeValue(text, "remove"), false);
+        //删除的对象 tc/td 或 tr
+        String scope = RegularUtil.fetchAttributeValue(text, "scope");
         if(BasicUtil.checkEl(test)){
             test = test.substring(2, test.length()-1);
         }
@@ -60,6 +68,22 @@ public class If extends AbstractTag implements Tag {
             }
         }else{
             html = elseValue;
+            if(remove){
+                if("tc".equalsIgnoreCase(scope) || "td".equalsIgnoreCase(scope)){
+                    Element tc = DocxUtil.getParent(wt, "tc");
+                    Element tr = tc.getParent();
+                    WTr wtr = WTr.tr(tr);
+                    wtr.remove(tc);
+                }else if("tr".equalsIgnoreCase(scope)){
+                    Element tr = DocxUtil.getParent(wt, "tr");
+                    Element table = tr.getParent();
+                    WTable wtable = WTable.table(table);
+                    wtable.remove(tr);
+                }
+            }
+        }
+        if(null == html){
+            html = "";
         }
         return html;
     }
