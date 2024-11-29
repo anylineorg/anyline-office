@@ -66,7 +66,7 @@ public class For extends AbstractTag implements Tag {
         }
         String scope = RegularUtil.fetchAttributeValue(text, "scope");
 
-        String body = RegularUtil.fetchTagBody(text, "aol:for", true);
+        String body = RegularUtil.fetchTagBody(text, "aol:for");
 
         Element tc = null;
         Element tr = null;
@@ -90,6 +90,7 @@ public class For extends AbstractTag implements Tag {
             reload_table = true;
         }
         if(reload_table){
+            doc.tables();
             wtc = WTc.tc(tc);
             wtr = WTr.tr(tr);
             wtable = WTable.table(table);
@@ -104,6 +105,7 @@ public class For extends AbstractTag implements Tag {
                 Collection list = (Collection) items;
                 int index = 0;
                 Map<String, Object> map = new HashMap<>();
+                int row_index = 0;
                 for (Object item : list) {
                     if (null != begin && index < begin) {
                         index++;
@@ -120,10 +122,21 @@ public class For extends AbstractTag implements Tag {
                         //在tr中添加td
                         String parse = doc.parseTag(wt, body, variables);
                         parse = placeholder(parse);
-                        wtr.append(parse);
+                        if(index == 0){
+                            //第一列直接填充
+                            wtc.setText(parse);
+                        }else {
+                            wtr.append(parse);
+                        }
                     } else if(null != wtr){
                         //遍历tr
-
+                        if(row_index == 0){
+                            row_index = wtable.getTrs().indexOf(wtr);
+                        }
+                        row_index ++;
+                        WTr neWTr = wtr.clone(true);
+                        wtable.insert(row_index, neWTr);
+                        neWTr.replace(doc.getReplaces());
                     } else if(null != body) {
                         //遍历文本
                         String parse = doc.parseTag(wt, body, variables);
