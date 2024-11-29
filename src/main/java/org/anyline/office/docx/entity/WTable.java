@@ -474,6 +474,10 @@ public class WTable extends WElement {
             reload();
         }
     }
+    public void remove(Element tr){
+        WTr wtr = tr(tr);
+        remove(wtr);
+    }
 
     /**
      * 获取row行col列的文本
