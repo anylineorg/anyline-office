@@ -404,7 +404,7 @@ public class WDocument extends WElement {
             if(txt.contains("<")){
                 if(!isFullTag(txt)){//如果不是完整标签 继续拼接下一个直到完成或失败
                     List<Element> items = tag(txt, ts, i+1);
-                    if(items.size() > 0) {
+                    if(!items.isEmpty()) {
                         items.add(0, t);
                         Element last = items.get(items.size() - 1);
                         i = ts.indexOf(last);
@@ -429,7 +429,7 @@ public class WDocument extends WElement {
      * 获取最外层tag所在的t
      * @param items 搜索范围
      * @param start 开始标记 &lt;或&lt;aol:
-     * @param start 开始位置
+     * @param index 开始位置
      * @return ts
      */
     private List<Element> tag(String start, List<Element> items, int index){
@@ -456,9 +456,9 @@ public class WDocument extends WElement {
                 String head ="<aol:" + name;
                 String foot_d = "</aol:"+name+">";
                 String foot_s = "/>";
-                String foot = foot_d;
                 int end_d = full.indexOf(foot_d);
                 int end_s = full.indexOf(foot_s);
+                String foot = foot_d;
                 int end = end_d;
                 if(end_s != -1){
                     //检测是否是单标签
@@ -472,7 +472,7 @@ public class WDocument extends WElement {
                     int head_count = BasicUtil.charCount(full, head);
                     int foot_count = BasicUtil.charCount(full, foot);
                     if(foot_count == head_count){
-                        //嵌套没有拆碎
+                        //嵌套没有拆碎 否则说明缺少结束标签需要继续查找
                         break;
                     }
                 }
