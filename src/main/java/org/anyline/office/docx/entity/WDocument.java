@@ -401,27 +401,99 @@ public class WDocument extends WElement {
         for(int i = 0; i < size; i++){
             Element t = ts.get(i);
             String txt = t.getTextTrim();
-            if(txt.startsWith("<")){
-                //TODO 解析被拆分的标签
-                List<Element> starts = completion(ts, i+1, "aol");
-                //找到开始标签
-                if(!starts.isEmpty()){
-                    for(Element start:starts){
+            if(txt.contains("<")){
+                if(!isFullTag(txt)){//如果不是完整标签 继续拼接下一个直到完成或失败
+                    List<Element> items = tag(txt, ts, i+1);
+                    if(items.size() > 0) {
+                        items.add(0, t);
+                        Element last = items.get(items.size() - 1);
+                        i = ts.indexOf(last);
+                        txt = text(items);
+                    }else{
+                        continue;
                     }
                 }
-            }else if(txt.startsWith("<aol:")){
-
-            }
-            try {
-                txt = parseTag(t, txt, variables);
-                t.setText(txt);
-            }catch (Exception e){
-                e.printStackTrace();
+                try {
+                    System.out.println("解析标签:"+txt);
+                    txt = parseTag(t, txt, variables);
+                    t.setText(txt);
+                }catch (Exception e){
+                    e.printStackTrace();
+                }
             }
         }
-
     }
 
+
+    /**
+     * 获取最外层tag所在的t
+     * @param items 搜索范围
+     * @param start 开始标记 &lt;或&lt;aol:
+     * @param start 开始位置
+     * @return ts
+     */
+    private List<Element> tag(String start, List<Element> items, int index){
+        List<Element> list = new ArrayList<>();
+        int size = items.size();
+        String full = "<"+RegularUtil.cut(start, "<", RegularUtil.TAG_END);
+        for(int i=index; i<size; i++){
+            Element item = items.get(i);
+            list.add(item);
+            String cur = item.getText();
+            full += cur;
+            if(BasicUtil.isEmpty(cur.trim())){
+                continue;
+            }
+            String name = null;
+            if(full.length() > 10){
+                if(!full.trim().startsWith("<aol:")){
+                    //不是标签
+                    return new ArrayList<>();
+                }
+                name = RegularUtil.cut(full, "aol:", " ");
+            }
+            if(null != name){
+                String head ="<aol:" + name;
+                String foot_d = "</aol:"+name+">";
+                String foot_s = "/>";
+                String foot = foot_d;
+                int end_d = full.indexOf(foot_d);
+                int end_s = full.indexOf(foot_s);
+                int end = end_d;
+                if(end_s != -1){
+                    //检测是否是单标签
+                    String chk_s = full.substring(0, end_s);
+                    if (!chk_s.contains(">")) {
+                        //单标签结束
+                        break;
+                    }
+                }
+                if(end_d != -1){
+                    int head_count = BasicUtil.charCount(full, head);
+                    int foot_count = BasicUtil.charCount(full, foot);
+                    if(foot_count == head_count){
+                        //嵌套没有拆碎
+                        break;
+                    }
+                }
+            }
+        }
+        return list;
+    }
+    private boolean isFullTag(String txt){
+        List<String> tags = RegularUtil.fetchOutTag(txt);
+        return !tags.isEmpty();
+    }
+    private String text(List<Element> ts){
+        StringBuilder builder = new StringBuilder();
+        for(Element t:ts){
+            String txt = t.getText();
+            if(null != txt) {
+                builder.append(txt);
+            }
+        }
+        return builder.toString();
+    }
     public String parseTag(Element t, String txt, Map<String, Object> variables) throws Exception{
         if(null == txt){
             return "";
@@ -435,7 +507,9 @@ public class WDocument extends WElement {
             String name = RegularUtil.cut(tag, "aol:", " ");
             Tag instance = null;
             //先执行外层的 外层需要设置新变量值
-            if("for".equalsIgnoreCase(name)){
+            if(null == name){
+                log.error("未识别的标签:{}", tag);
+            }else if("for".equalsIgnoreCase(name)){
                 instance = new For();
             } else if("if".equalsIgnoreCase(name)){
                 instance = new If();
