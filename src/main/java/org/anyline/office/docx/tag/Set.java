@@ -28,15 +28,28 @@ public class Set extends AbstractTag implements Tag{
     private String var;
     private Object data;
     private String selector;
+    private String distinct;
     private Integer index = null;
     private Integer begin = null;
     private Integer end = null;
     private Integer qty = null;
+    public void release(){
+        super.release();
+        var = null;
+        data = null;
+        selector = null;
+        distinct = null;
+        index = null;
+        begin = null;
+        end = null;
+        qty = null;
+    }
     public String parse(String text){
         String html = "";
         String key = RegularUtil.fetchAttributeValue(text, "data");
         var = RegularUtil.fetchAttributeValue(text, "var");
         selector = RegularUtil.fetchAttributeValue(text, "selector");
+        distinct = RegularUtil.fetchAttributeValue(text, "distinct");
         index = BasicUtil.parseInt(RegularUtil.fetchAttributeValue(text, "index"), null);
         begin = BasicUtil.parseInt(RegularUtil.fetchAttributeValue(text, "begin"), null);
         end = BasicUtil.parseInt(RegularUtil.fetchAttributeValue(text, "end"), null);
@@ -44,7 +57,7 @@ public class Set extends AbstractTag implements Tag{
         if(BasicUtil.isEmpty(key) || BasicUtil.isEmpty(var)){
             return "";
         }
-        data = data(key);
+        data = context.data(key);
         if (BasicUtil.isNotEmpty(data)) {
             if(data instanceof Collection) {
                 Collection items = (Collection) data;
@@ -69,7 +82,11 @@ public class Set extends AbstractTag implements Tag{
                         data = BeanUtil.cuts(items, range[0], range[1]);
                     }
                 }
+                if(null != distinct && data instanceof Collection) {
+                    data = BeanUtil.distinct((Collection) data, distinct.split(","));
+                }
             }
+
             doc.variable(var, data);
             doc.replace(var, data.toString());
         }else{

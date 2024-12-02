@@ -18,10 +18,12 @@ package org.anyline.office.docx.tag;
 
 import org.anyline.util.BasicUtil;
 import org.anyline.util.MoneyUtil;
-import org.anyline.util.NumberUtil;
 import org.anyline.util.regular.RegularUtil;
 
 public class MoneyFormat extends AbstractTag implements Tag{
+    public void release(){
+        super.release();
+    }
     @Override
     public String parse(String text) {
         String result = "";
@@ -30,7 +32,7 @@ public class MoneyFormat extends AbstractTag implements Tag{
         if(BasicUtil.isEmpty(key)){
             return "";
         }
-        Object data = data(key.trim());
+        Object data = context.data(key.trim());
         if(BasicUtil.isNotEmpty(data)) {
             double d = BasicUtil.parseDouble(data, 0d);
             result = MoneyUtil.format(d);

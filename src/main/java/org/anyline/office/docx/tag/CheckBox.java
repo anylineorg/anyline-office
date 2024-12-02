@@ -19,7 +19,6 @@ package org.anyline.office.docx.tag;
 import org.anyline.util.BasicUtil;
 import org.anyline.util.BeanUtil;
 import org.anyline.util.ConfigTable;
-import org.anyline.util.encrypt.DESUtil;
 import org.anyline.util.regular.RegularUtil;
 
 import java.util.*;
@@ -62,6 +61,23 @@ public class CheckBox extends AbstractTag implements Tag {
     private String type = "checkbox"; //text:只显示文本
     private String split = ""; //只显示文本时 设置分隔符号
 
+    public void release(){
+        super.release();
+        data = null;
+        valueKey = ConfigTable.DEFAULT_PRIMARY_KEY;
+        textKey = "NM";
+        property = null;
+        rely = null;
+        head = null;
+        headValue = null;
+        value = null;
+        checkedValue = "";
+        vol = 0;
+        label = "";
+        checked = false;
+        type = "checkbox";
+        split = "";
+    }
     @Override
     public String parse(String text) {
         StringBuffer html = new StringBuffer();
@@ -94,7 +110,7 @@ public class CheckBox extends AbstractTag implements Tag {
 
         if (null != data) {
             if (data instanceof String) {
-                data = data((String)data);
+                data = context.data((String)data);
             }
             if (data instanceof String) {
                 String items[] = data.toString().split(",");
@@ -113,7 +129,7 @@ public class CheckBox extends AbstractTag implements Tag {
             }
             // 选中值
             if (null != this.value) {
-                value = data(value.toString());
+                value = context.data(value.toString());
                 if (this.value instanceof Collection) {
                     List list = new ArrayList();
                     Collection cols = (Collection) this.value;

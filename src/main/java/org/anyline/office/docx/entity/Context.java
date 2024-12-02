@@ -20,6 +20,9 @@ public class Context {
     public LinkedHashMap<String, String> replaces(){
         return htmls;
     }
+    public LinkedHashMap<String, String> texts(){
+        return texts;
+    }
     public LinkedHashMap<String, Object> variables(){
         return variables;
     }
@@ -111,7 +114,11 @@ public class Context {
                             if(null == data){
                                 break;
                             }
-                            data = BeanUtil.getFieldValue(data, k);
+                            if(data instanceof Collection && "size".equals(k)){
+                                data = ((Collection)data).size();
+                            }else {
+                                data = BeanUtil.getFieldValue(data, k);
+                            }
                         }
                     }
                 }

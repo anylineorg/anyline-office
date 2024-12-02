@@ -21,6 +21,9 @@ import org.anyline.util.NumberUtil;
 import org.anyline.util.regular.RegularUtil;
 
 public class NumberFormat extends AbstractTag implements Tag{
+    public void release(){
+        super.release();
+    }
     @Override
     public String parse(String text) {
         String result = "";
@@ -30,7 +33,7 @@ public class NumberFormat extends AbstractTag implements Tag{
         if(BasicUtil.isEmpty(key) || BasicUtil.isEmpty(format)){
             return "";
         }
-        Object data = data(key.trim());
+        Object data = context.data(key.trim());
         if(BasicUtil.isNotEmpty(data)) {
             result = NumberUtil.format(data.toString(), format);
         }

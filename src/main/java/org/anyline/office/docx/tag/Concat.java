@@ -25,13 +25,18 @@ public class Concat  extends AbstractTag implements Tag{
 	private static final long serialVersionUID = 1L;
 	private Object data;
 	private String split = ",";
- 
+
+	public void release(){
+		super.release();
+		data = null;
+		split = ",";
+	}
 	public String parse(String text) {
 		String result = "";
 		try {
 			String key = RegularUtil.fetchAttributeValue(text, "data");
-			String property = RegularUtil.fetchAttributeValue(text, "data");
-			String var = RegularUtil.fetchAttributeValue(text, "data");
+			String property = RegularUtil.fetchAttributeValue(text, "property");
+			String var = RegularUtil.fetchAttributeValue(text, "var");
 			String distinct = RegularUtil.fetchAttributeValue(text, "distinct");
 			String split = RegularUtil.fetchAttributeValue(text, "split");
 			if(BasicUtil.isEmpty(key)){

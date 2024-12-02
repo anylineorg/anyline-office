@@ -25,6 +25,12 @@ public class Group extends AbstractTag implements Tag{
     private Object data;
     private String by;
 
+    public void release(){
+        super.release();
+        var = null;
+        data = null;
+        by = null;
+    }
     public String parse(String text){
         String key = RegularUtil.fetchAttributeValue(text, "data");
         var = RegularUtil.fetchAttributeValue(text, "data");
@@ -32,12 +38,12 @@ public class Group extends AbstractTag implements Tag{
         if(BasicUtil.isEmpty(key) || BasicUtil.isEmpty(var) || BasicUtil.isEmpty(by)){
             return "";
         }
-        data = data(key);
+        data = context.data(key);
         if(data instanceof DataSet){
             DataSet set = (DataSet) data;
             set.group(by.split(","));
             DataSet groups = null;
-            variables.put(var, groups);
+            doc.context().variable(var, groups);
         }
         return "";
     }

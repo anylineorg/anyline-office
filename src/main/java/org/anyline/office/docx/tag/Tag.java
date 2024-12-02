@@ -16,17 +16,30 @@
 
 package org.anyline.office.docx.tag;
 
+import org.anyline.office.docx.entity.Context;
 import org.anyline.office.docx.entity.WDocument;
-import org.anyline.office.docx.entity.WText;
 import org.dom4j.Element;
 
-import java.util.Map;
+import java.util.List;
 
 public interface Tag {
     void init(WDocument doc);
-    void variable(String key, Object value);
-    void variable(Map<String, Object> values);
+    void context(Context context);
+    Context context();
     String parse(String text) throws Exception;
-    Element wt();
-    void wt(Element wt);
+    default Element wt() {
+        List<Element> wts = wts();
+        if(wts.isEmpty()){
+            return null;
+        }
+        return wts.get(0);
+    }
+    default void wt(Element wt) {
+        wts().add(wt);
+    }
+
+    List<Element> wts();
+    void wts(List<Element> wts);
+    default void release(){}
+
 }

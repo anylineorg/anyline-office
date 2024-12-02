@@ -28,6 +28,9 @@ import org.anyline.util.regular.RegularUtil;
 import org.dom4j.Element;
 
 public class If extends AbstractTag implements Tag {
+    public void release(){
+        super.release();
+    }
     public String parse(String text) throws Exception{
         String html = "";
         String test = RegularUtil.fetchAttributeValue(text, "test");
@@ -45,8 +48,8 @@ public class If extends AbstractTag implements Tag {
         }
         boolean chk = false;
         try {
-            OgnlContext context = new OgnlContext(null, null, new DefaultOgnlMemberAccess(true));
-            Boolean bol = (Boolean) Ognl.getValue(test, context, variables);
+            OgnlContext ognl = new OgnlContext(null, null, new DefaultOgnlMemberAccess(true));
+            Boolean bol = (Boolean) Ognl.getValue(test, ognl, context.variables());
             if(null != bol){
                 chk = bol;
             }
@@ -62,20 +65,20 @@ public class If extends AbstractTag implements Tag {
                 text = text.replace(test, "");
                 String body = RegularUtil.fetchTagBody(text, "aol:if");
                 if(body.contains("<aol:")){
-                    body = doc.parseTag(wt, body, variables);
+                    body = DocxUtil.parseTag(doc, wts, body, context);
                 }
                 html = body;
             }
         }else{
             html = elseValue;
-            if(remove){
+            if(remove){//删除行或行
                 if("tc".equalsIgnoreCase(scope) || "td".equalsIgnoreCase(scope)){
-                    Element tc = DocxUtil.getParent(wt, "tc");
+                    Element tc = DocxUtil.getParent(wts.get(0), "tc");
                     Element tr = tc.getParent();
                     WTr wtr = WTr.tr(tr);
                     wtr.remove(tc);
                 }else if("tr".equalsIgnoreCase(scope)){
-                    Element tr = DocxUtil.getParent(wt, "tr");
+                    Element tr = DocxUtil.getParent(wts.get(0), "tr");
                     Element table = tr.getParent();
                     WTable wtable = WTable.table(table);
                     wtable.remove(tr);
