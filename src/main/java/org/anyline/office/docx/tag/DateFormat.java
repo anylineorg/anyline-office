@@ -23,6 +23,9 @@ import org.anyline.util.regular.RegularUtil;
 import java.util.Date;
 
 public class DateFormat extends AbstractTag implements Tag{
+    public void release(){
+        super.release();
+    }
     @Override
     public String parse(String text) {
         String result = text;
@@ -33,21 +36,17 @@ public class DateFormat extends AbstractTag implements Tag{
         String format = RegularUtil.fetchAttributeValue(text, "format");
 
         if(BasicUtil.checkEl(format)){
-            format = placeholder(format);
+            format = context.placeholder(format);
         }
 
         Date date = null;
-        if(null == key){
+        Object data = context.data(key);
+        if(BasicUtil.isEmpty(data)){
             if("true".equalsIgnoreCase(evl) || "1".equalsIgnoreCase(evl)){
-                date = new Date();
+                data = new Date();
             }else {
                 return "";
             }
-        }
-
-        Object data = data(key);
-        if(BasicUtil.isEmpty(data)){
-            return "";
         }
         date = DateUtil.parse(data);
         if(null == data){
