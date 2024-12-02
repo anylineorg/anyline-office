@@ -19,21 +19,23 @@
 
 package org.anyline.office.docx.util;
 
+import org.anyline.log.Log;
+import org.anyline.log.LogProxy;
+import org.anyline.office.docx.entity.Context;
+import org.anyline.office.docx.entity.WDocument;
+import org.anyline.office.docx.tag.Tag;
 import org.anyline.util.BasicUtil;
 import org.anyline.util.DomUtil;
 import org.anyline.util.StyleParser;
 import org.anyline.util.ZipUtil;
 import org.anyline.util.regular.RegularUtil;
 import org.dom4j.*;
-import org.anyline.log.Log;
-import org.anyline.log.LogProxy;
 
 import java.io.File;
 import java.util.*;
 
 public class DocxUtil {
     private static Log log = LogProxy.get(DocxUtil.class);
-
     /**
      * 根据关键字查找样式列表ID
      * @param docx docx文件
@@ -350,6 +352,21 @@ public class DocxUtil {
     }
 
     /**
+     * wt列表文本合并
+     * @param ts W:t 集合
+     * @return String
+     */
+    public static String text(List<Element> ts){
+        StringBuilder builder = new StringBuilder();
+        for(Element t:ts){
+            String txt = t.getText();
+            if(null != txt) {
+                builder.append(txt);
+            }
+        }
+        return builder.toString();
+    }
+    /**
      * src插入到ref之后
      * @param src src
      * @param ref ref
@@ -462,6 +479,46 @@ public class DocxUtil {
         return list;
     }
 
+    public static String parseTag(WDocument doc, List<Element> ts, String txt, Context context) throws Exception{
+        if(null == txt){
+            return "";
+        }
+        txt = txt.replace("”", "\"");
+        //String reg = "(?i)(<aol:(\\w+)[^<]*?>)[^<]*(</aol:\\2>)";
+        //这里 不要把内层标签独立拆出来，因为外层标签可能 会设置新变量值影响内层
+        List<String> tags = RegularUtil.fetchOutTag(txt);
+        for(String tag:tags){
+            //标签name如<aol:img 中的img
+            String name = RegularUtil.cut(tag, "aol:", " ");
+            Tag instance = null;
+            //先执行外层的 外层需要设置新变量值
+            if(null == name){
+                log.error("未识别的标签:{}", tag);
+            }else{
+                instance = doc.tag(name);
+            }
+            if(null == instance){
+                log.error("未识别的标签:{}", name);
+            }
+            String html = "";
+            if(null != instance) {
+                //复制占位值
+                instance.init(doc);
+                instance.wts(ts);
+                instance.context(context);
+                //把 aol标签解析成html标签 下一步会解析html标签
+                html = instance.parse(tag);
+                instance.release();
+            }
+            //txt = txt.replace(tag, html);
+            txt = BasicUtil.replaceFirst(txt, tag, html);
+            //如果有子标签 应该在父标签中一块解析完
+            /*if(txt.contains("<aol:")){
+                txt = parseTag(txt, variables);
+            }*/
+        }
+        return txt;
+    }
     public static void border(Element border, Map<String, String> styles){
         border(border,"top", styles);
         border(border,"right", styles);
