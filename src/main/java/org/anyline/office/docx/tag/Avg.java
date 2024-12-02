@@ -18,7 +18,10 @@ package org.anyline.office.docx.tag;
 
 import org.anyline.entity.DataSet;
 import org.anyline.util.BasicUtil;
+import org.anyline.util.NumberUtil;
 import org.anyline.util.regular.RegularUtil;
+
+import java.math.BigDecimal;
 
 public class Avg extends AbstractTag implements Tag {
     private Object data;
@@ -27,6 +30,7 @@ public class Avg extends AbstractTag implements Tag {
     private String distinct;
     private int scale = 2;
     private int round = 4;
+    private String format;
 
     public void release(){
         super.release();
@@ -36,6 +40,7 @@ public class Avg extends AbstractTag implements Tag {
         distinct = null;
         scale = 2;
         round = 4;
+        format = null;
     }
     public String parse(String text) {
         String result = "";
@@ -55,14 +60,21 @@ public class Avg extends AbstractTag implements Tag {
             if(data instanceof String) {
                 String[] items = data.toString().split(",");
             }else if(data instanceof DataSet){
+                BigDecimal avg = null;
                 DataSet set = (DataSet) data;
                 if(BasicUtil.isNotEmpty(distinct)){
                     set = set.distinct(distinct.split(","));
                 }
                 if(null != property){
-                    result = set.avg(scale, round, property.split(","))+"";
+                    avg = set.avg(scale, round, property.split(","));
                 }
-
+                if(null != avg){
+                    if(null != format){
+                        result = NumberUtil.format(avg, format);
+                    }else{
+                        result = avg.toString();
+                    }
+                }
             }
             if(BasicUtil.isNotEmpty(var)){
                 doc.context().variable(var, result);
