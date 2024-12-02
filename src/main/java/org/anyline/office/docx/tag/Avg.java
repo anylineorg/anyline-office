@@ -16,5 +16,61 @@
 
 package org.anyline.office.docx.tag;
 
-public class Avg {
+import org.anyline.entity.DataSet;
+import org.anyline.util.BasicUtil;
+import org.anyline.util.regular.RegularUtil;
+
+public class Avg extends AbstractTag implements Tag {
+    private Object data;
+    private String property;
+    private String var;
+    private String distinct;
+    private int scale = 2;
+    private int round = 4;
+
+    public void release(){
+        super.release();
+        property = null;
+        data = null;
+        var = null;
+        distinct = null;
+        scale = 2;
+        round = 4;
+    }
+    public String parse(String text) {
+        String result = "";
+        try {
+            String key = RegularUtil.fetchAttributeValue(text, "data");
+            property = RegularUtil.fetchAttributeValue(text, "property");
+            var = RegularUtil.fetchAttributeValue(text, "var");
+            distinct = RegularUtil.fetchAttributeValue(text, "distinct");
+            scale = BasicUtil.parseInt(RegularUtil.fetchAttributeValue(text, "scale"), scale);
+            round = BasicUtil.parseInt(RegularUtil.fetchAttributeValue(text, "round"), round);
+
+            if(BasicUtil.isEmpty(key)){
+                return "";
+            }
+            data = context.data(key);
+
+            if(data instanceof String) {
+                String[] items = data.toString().split(",");
+            }else if(data instanceof DataSet){
+                DataSet set = (DataSet) data;
+                if(BasicUtil.isNotEmpty(distinct)){
+                    set = set.distinct(distinct.split(","));
+                }
+                if(null != property){
+                    result = set.avg(scale, round, property.split(","))+"";
+                }
+
+            }
+            if(BasicUtil.isNotEmpty(var)){
+                doc.context().variable(var, result);
+                result = "";
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return result;
+    }
 }

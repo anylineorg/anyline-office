@@ -39,6 +39,20 @@ public class Sum extends AbstractTag implements Tag{
     private String def; // 默认值
     private Integer scale;//小数位
     private Integer round; // 参考BigDecimal.ROUND_UP;
+    public void release(){
+        super.release();
+        var = null;
+        data = null;
+        selector = null;
+        property = null;
+        format = null;
+        nvl = null;
+        min = null;
+        max = null;
+        def = null;
+        scale = null;
+        round = null;
+    }
     public String parse(String text){
         String html = "";
         String key = RegularUtil.fetchAttributeValue(text, "data");
@@ -55,7 +69,7 @@ public class Sum extends AbstractTag implements Tag{
         if(BasicUtil.isEmpty(key)){
             return html;
         }
-        data = data(key);
+        data = context.data(key);
         if(BasicUtil.isEmpty(data)){
             return html;
         }
@@ -110,6 +124,10 @@ public class Sum extends AbstractTag implements Tag{
 
         if(BasicUtil.isEmpty(html) && BasicUtil.isNotEmpty(nvl)) {
             html = nvl;
+        }
+        if(null != var){
+            doc.context().variable(var, html);
+            html = "";
         }
 
         return html;
