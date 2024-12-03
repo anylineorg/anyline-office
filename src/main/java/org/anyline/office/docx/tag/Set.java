@@ -19,9 +19,8 @@ package org.anyline.office.docx.tag;
 import org.anyline.entity.DataSet;
 import org.anyline.util.BasicUtil;
 import org.anyline.util.BeanUtil;
-import org.anyline.util.regular.RegularUtil;
 
-import java.util.*;
+import java.util.Collection;
 
 public class Set extends AbstractTag implements Tag{
 
@@ -46,14 +45,14 @@ public class Set extends AbstractTag implements Tag{
     }
     public String parse(String text){
         String html = "";
-        String key = RegularUtil.fetchAttributeValue(text, "data");
-        var = RegularUtil.fetchAttributeValue(text, "var");
-        selector = RegularUtil.fetchAttributeValue(text, "selector");
-        distinct = RegularUtil.fetchAttributeValue(text, "distinct");
-        index = BasicUtil.parseInt(RegularUtil.fetchAttributeValue(text, "index"), null);
-        begin = BasicUtil.parseInt(RegularUtil.fetchAttributeValue(text, "begin"), null);
-        end = BasicUtil.parseInt(RegularUtil.fetchAttributeValue(text, "end"), null);
-        qty = BasicUtil.parseInt(RegularUtil.fetchAttributeValue(text, "qty"), null);
+        String key = fetchAttributeValue(text, "data", "d");
+        var = fetchAttributeValue(text, "var");
+        selector = fetchAttributeValue(text, "selector","st");
+        distinct = fetchAttributeValue(text, "distinct", "ds");
+        index = BasicUtil.parseInt(fetchAttributeValue(text, "index", "i"), null);
+        begin = BasicUtil.parseInt(fetchAttributeValue(text, "begin", "b"), null);
+        end = BasicUtil.parseInt(fetchAttributeValue(text, "end", "e"), null);
+        qty = BasicUtil.parseInt(fetchAttributeValue(text, "qty", "q"), null);
         if(BasicUtil.isEmpty(key) || BasicUtil.isEmpty(var)){
             return "";
         }

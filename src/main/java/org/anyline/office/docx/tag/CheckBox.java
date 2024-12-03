@@ -19,7 +19,6 @@ package org.anyline.office.docx.tag;
 import org.anyline.util.BasicUtil;
 import org.anyline.util.BeanUtil;
 import org.anyline.util.ConfigTable;
-import org.anyline.util.regular.RegularUtil;
 
 import java.util.*;
 
@@ -88,25 +87,25 @@ public class CheckBox extends AbstractTag implements Tag {
         if(null == rely) {
             rely = valueKey;
         }
-        data = RegularUtil.fetchAttributeValue(text, "data");
-        value = RegularUtil.fetchAttributeValue(text, "value");
-        split = RegularUtil.fetchAttributeValue(text, "split");
+        data = fetchAttributeValue(text, "data", "d");
+        value = fetchAttributeValue(text, "value", "v");
+        split = fetchAttributeValue(text, "split", "s");
         if(null == split){
             split = "";
         }
         if(BasicUtil.isEmpty(data)){
             return "";
         }
-        type = RegularUtil.fetchAttributeValue(text, "type");
-        String vk = RegularUtil.fetchAttributeValue(text, "valueKey");
+        type = fetchAttributeValue(text, "type", "t");
+        String vk = fetchAttributeValue(text, "valueKey", "vk");
         if(BasicUtil.isNotEmpty(vk)){
             valueKey = vk;
         }
-        String tk = RegularUtil.fetchAttributeValue(text, "textKey");
+        String tk = fetchAttributeValue(text, "textKey", "tk");
         if(BasicUtil.isNotEmpty(tk)){
             textKey = tk;
         }
-        vol = BasicUtil.parseInt(RegularUtil.fetchAttributeValue(text, "vol"), vol);
+        vol = BasicUtil.parseInt(fetchAttributeValue(text, "vol"), vol);
 
         if (null != data) {
             if (data instanceof String) {

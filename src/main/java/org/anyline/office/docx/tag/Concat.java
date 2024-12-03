@@ -19,7 +19,6 @@ package org.anyline.office.docx.tag;
 import org.anyline.entity.DataSet;
 import org.anyline.util.BasicUtil;
 import org.anyline.util.BeanUtil;
-import org.anyline.util.regular.RegularUtil;
 
 public class Concat  extends AbstractTag implements Tag{
 	private static final long serialVersionUID = 1L;
@@ -34,11 +33,11 @@ public class Concat  extends AbstractTag implements Tag{
 	public String parse(String text) {
 		String result = "";
 		try {
-			String key = RegularUtil.fetchAttributeValue(text, "data");
-			String property = RegularUtil.fetchAttributeValue(text, "property");
-			String var = RegularUtil.fetchAttributeValue(text, "var");
-			String distinct = RegularUtil.fetchAttributeValue(text, "distinct");
-			String split = RegularUtil.fetchAttributeValue(text, "split");
+			String key = fetchAttributeValue(text, "data", "d");
+			String property = fetchAttributeValue(text, "property", "p");
+			String var = fetchAttributeValue(text, "var");
+			String distinct = fetchAttributeValue(text, "distinct", "ds");
+			String split = fetchAttributeValue(text, "split", "s");
 			if(BasicUtil.isEmpty(key)){
 				return "";
 			}

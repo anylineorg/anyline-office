@@ -18,7 +18,6 @@ package org.anyline.office.docx.tag;
 
 import org.anyline.util.BasicUtil;
 import org.anyline.util.MoneyUtil;
-import org.anyline.util.regular.RegularUtil;
 
 public class MoneyFormat extends AbstractTag implements Tag{
     public void release(){
@@ -28,7 +27,7 @@ public class MoneyFormat extends AbstractTag implements Tag{
     public String parse(String text) {
         String result = "";
         //<aol:money value="${total}"></aol:money>
-        String key = RegularUtil.fetchAttributeValue(text, "value");
+        String key = fetchAttributeValue(text, "value", "v");
         if(BasicUtil.isEmpty(key)){
             return "";
         }

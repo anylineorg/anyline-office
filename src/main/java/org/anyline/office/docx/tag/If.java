@@ -33,16 +33,16 @@ public class If extends AbstractTag implements Tag {
     }
     public String parse(String text) throws Exception{
         String html = "";
-        String test = RegularUtil.fetchAttributeValue(text, "test");
-        String value = RegularUtil.fetchAttributeValue(text, "value");
+        String test = fetchAttributeValue(text, "test", "t");
+        String value = fetchAttributeValue(text, "value", "v");
         //false时是否删除
-        boolean remove = BasicUtil.parseBoolean(RegularUtil.fetchAttributeValue(text, "remove"), false);
+        boolean remove = BasicUtil.parseBoolean(fetchAttributeValue(text, "remove", "r"), false);
         //删除的对象 tc/td 或 tr
-        String scope = RegularUtil.fetchAttributeValue(text, "scope");
+        String scope = fetchAttributeValue(text, "scope", "s");
         if(BasicUtil.checkEl(test)){
             test = test.substring(2, test.length()-1);
         }
-        String elseValue = RegularUtil.fetchAttributeValue(text, "else");
+        String elseValue = fetchAttributeValue(text, "else", "e");
         if(null == elseValue){
             elseValue = "";
         }

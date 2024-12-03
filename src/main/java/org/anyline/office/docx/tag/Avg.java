@@ -19,7 +19,6 @@ package org.anyline.office.docx.tag;
 import org.anyline.entity.DataSet;
 import org.anyline.util.BasicUtil;
 import org.anyline.util.NumberUtil;
-import org.anyline.util.regular.RegularUtil;
 
 import java.math.BigDecimal;
 
@@ -45,12 +44,12 @@ public class Avg extends AbstractTag implements Tag {
     public String parse(String text) {
         String result = "";
         try {
-            String key = RegularUtil.fetchAttributeValue(text, "data");
-            property = RegularUtil.fetchAttributeValue(text, "property");
-            var = RegularUtil.fetchAttributeValue(text, "var");
-            distinct = RegularUtil.fetchAttributeValue(text, "distinct");
-            scale = BasicUtil.parseInt(RegularUtil.fetchAttributeValue(text, "scale"), scale);
-            round = BasicUtil.parseInt(RegularUtil.fetchAttributeValue(text, "round"), round);
+            String key = fetchAttributeValue(text, "data", "d");
+            property = fetchAttributeValue(text, "property", "p");
+            var = fetchAttributeValue(text, "var");
+            distinct = fetchAttributeValue(text, "distinct", "ds");
+            scale = BasicUtil.parseInt(fetchAttributeValue(text, "scale", "s"), scale);
+            round = BasicUtil.parseInt(fetchAttributeValue(text, "round", "r"), round);
 
             if(BasicUtil.isEmpty(key)){
                 return "";

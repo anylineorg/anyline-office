@@ -18,7 +18,6 @@ package org.anyline.office.docx.tag;
 
 import org.anyline.entity.DataSet;
 import org.anyline.util.BasicUtil;
-import org.anyline.util.regular.RegularUtil;
 
 public class Group extends AbstractTag implements Tag{
     private String var;
@@ -32,9 +31,9 @@ public class Group extends AbstractTag implements Tag{
         by = null;
     }
     public String parse(String text){
-        String key = RegularUtil.fetchAttributeValue(text, "data");
-        var = RegularUtil.fetchAttributeValue(text, "data");
-        by = RegularUtil.fetchAttributeValue(text, "by");
+        String key = fetchAttributeValue(text, "data", "d");
+        var = fetchAttributeValue(text, "var");
+        by = fetchAttributeValue(text, "by");
         if(BasicUtil.isEmpty(key) || BasicUtil.isEmpty(var) || BasicUtil.isEmpty(by)){
             return "";
         }

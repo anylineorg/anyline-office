@@ -20,7 +20,6 @@ import org.anyline.entity.DataSet;
 import org.anyline.util.BasicUtil;
 import org.anyline.util.BeanUtil;
 import org.anyline.util.NumberUtil;
-import org.anyline.util.regular.RegularUtil;
 
 import java.math.BigDecimal;
 import java.util.Collection;
@@ -39,6 +38,7 @@ public class Sum extends AbstractTag implements Tag{
     private String def; // 默认值
     private Integer scale;//小数位
     private Integer round; // 参考BigDecimal.ROUND_UP;
+
     public void release(){
         super.release();
         var = null;
@@ -55,17 +55,17 @@ public class Sum extends AbstractTag implements Tag{
     }
     public String parse(String text){
         String html = "";
-        String key = RegularUtil.fetchAttributeValue(text, "data");
-        var = RegularUtil.fetchAttributeValue(text, "var");
-        selector = RegularUtil.fetchAttributeValue(text, "selector");
-        property = RegularUtil.fetchAttributeValue(text, "property");
-        format = RegularUtil.fetchAttributeValue(text, "format");
-        nvl = RegularUtil.fetchAttributeValue(text, "nvl");
-        min = RegularUtil.fetchAttributeValue(text, "min");
-        max = RegularUtil.fetchAttributeValue(text, "max");
-        def = RegularUtil.fetchAttributeValue(text, "def");
-        scale = BasicUtil.parseInt(RegularUtil.fetchAttributeValue(text, "selector"), null);
-        round = BasicUtil.parseInt(RegularUtil.fetchAttributeValue(text, "round"), null);
+        String key = fetchAttributeValue(text, "data", "d");
+        var = fetchAttributeValue(text, "var");
+        selector = fetchAttributeValue(text, "selector", "st");
+        property = fetchAttributeValue(text, "property", "p");
+        format = fetchAttributeValue(text, "format","f");
+        nvl = fetchAttributeValue(text, "nvl", "n");
+        min = fetchAttributeValue(text, "min");
+        max = fetchAttributeValue(text, "max");
+        def = fetchAttributeValue(text, "def");
+        scale = BasicUtil.parseInt(fetchAttributeValue(text, "scale", "s"), null);
+        round = BasicUtil.parseInt(fetchAttributeValue(text, "round", "r"), null);
         if(BasicUtil.isEmpty(key)){
             return html;
         }

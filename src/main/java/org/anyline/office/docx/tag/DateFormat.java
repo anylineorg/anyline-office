@@ -18,7 +18,6 @@ package org.anyline.office.docx.tag;
 
 import org.anyline.util.BasicUtil;
 import org.anyline.util.DateUtil;
-import org.anyline.util.regular.RegularUtil;
 
 import java.util.Date;
 
@@ -30,17 +29,22 @@ public class DateFormat extends AbstractTag implements Tag{
     public String parse(String text) {
         String result = text;
         //<aol:date format="yyyy-MM-dd HH:mm:ss" value="${current_time}"></aol:date>
-        String key = RegularUtil.fetchAttributeValue(text, "value");
+        String key = fetchAttributeValue(text, "value", "v");
         //空值时 是否取当前时间
-        String evl = RegularUtil.fetchAttributeValue(text, "evl");
-        String format = RegularUtil.fetchAttributeValue(text, "format");
+        String evl = fetchAttributeValue(text, "evl", "e");
+        String format = fetchAttributeValue(text, "format", "f");
 
         if(BasicUtil.checkEl(format)){
             format = context.placeholder(format);
         }
 
         Date date = null;
-        Object data = context.data(key);
+        Object data = null;
+        if(null != key){
+            data = context.data(key);
+        }else{
+            data = body(text, "date");
+        }
         if(BasicUtil.isEmpty(data)){
             if("true".equalsIgnoreCase(evl) || "1".equalsIgnoreCase(evl)){
                 data = new Date();

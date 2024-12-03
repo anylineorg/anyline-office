@@ -27,6 +27,8 @@ public interface Tag {
     void context(Context context);
     Context context();
     String parse(String text) throws Exception;
+    String ref();
+    void ref(String ref);
     default Element wt() {
         List<Element> wts = wts();
         if(wts.isEmpty()){
@@ -41,5 +43,6 @@ public interface Tag {
     List<Element> wts();
     void wts(List<Element> wts);
     default void release(){}
+
 
 }
