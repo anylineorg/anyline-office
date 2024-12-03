@@ -19,6 +19,7 @@ package org.anyline.office.docx.tag;
 import org.anyline.office.docx.entity.Context;
 import org.anyline.office.docx.entity.WDocument;
 import org.anyline.util.BeanUtil;
+import org.anyline.util.regular.RegularUtil;
 import org.dom4j.Element;
 
 import java.io.File;
@@ -31,6 +32,7 @@ public abstract class AbstractTag implements Tag {
     protected WDocument doc;
     protected List<Element> wts = new ArrayList<>();
     protected Context context = new Context();
+    protected String ref;
 
     public void init(WDocument doc) {
         this.doc = doc;
@@ -40,6 +42,12 @@ public abstract class AbstractTag implements Tag {
         wts.clear();
         children.clear();
         context = new Context();
+    }
+    public void ref(String ref){
+        this.ref = ref;
+    }
+    public String ref(){
+        return ref;
     }
 
     public void context(Context context) {
@@ -104,5 +112,29 @@ public abstract class AbstractTag implements Tag {
 
     public String parse(String text) throws Exception {
         return text;
+    }
+    protected String fetchAttributeValue(String text, String ... attributes){
+        for(String attribute:attributes){
+            String value = RegularUtil.fetchAttributeValue(text, attribute);
+            if(null == value && null != ref){
+                value = RegularUtil.fetchAttributeValue(ref, attribute);
+            }
+            if(null != attribute){
+                return value;
+            }
+        }
+        return null;
+    }
+    protected String body(String text, String name){
+        String body = null;
+        try {
+            body = RegularUtil.fetchTagBody(text, "aol:"+name);
+            if (null == body && null != ref) {
+                body = RegularUtil.fetchTagBody(ref, "aol:ref");
+            }
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+        return body;
     }
 }
