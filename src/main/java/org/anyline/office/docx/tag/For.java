@@ -26,10 +26,7 @@ import org.anyline.util.DomUtil;
 import org.anyline.util.regular.RegularUtil;
 import org.dom4j.Element;
 
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class For extends AbstractTag implements Tag {
     private Object items;
@@ -78,74 +75,102 @@ public class For extends AbstractTag implements Tag {
         String scope = fetchAttributeValue(text, "scope", "sp");
 
         String body = RegularUtil.fetchTagBody(text, "aol:for");
-
-        Element tc = null;
-        Element tr = null;
-        Element table = null;
+        int type = 0; //0:txt 1:tc 2:tr
+        int tr_index = -1; //模板行下标
+        int tc_index = -1; //模板列下标
+        List<Element> tcs = new ArrayList<>();
+        List<Element> trs = new ArrayList<>();
         if("tc".equalsIgnoreCase(scope) || "td".equalsIgnoreCase(scope)){
-            tc = DocxUtil.getParent(wts.get(0), "tc");
-            tr = tc.getParent();
-            table = tr.getParent();
+            type = 1;
+            for(Element wt: wts){
+                Element tc = DocxUtil.getParent(wt, "tc");
+                if(!tcs.contains(tc)) {
+                    tcs.add(tc);
+                    if(tc_index == -1){
+                        tc_index = DomUtil.elements(tc.getParent(), "tc").indexOf(tc);
+                    }
+                }
+            }
         }else if("tr".equalsIgnoreCase(scope)){
-            tr = DocxUtil.getParent(wts.get(0), "tr");
-            table = tr.getParent();
+            type = 2;
+            for(Element wt: wts){
+                Element tr = DocxUtil.getParent(wt, "tr");
+                if(!trs.contains(tr)){
+                    trs.add(tr);
+                    if(tr_index == -1){
+                        tr_index = DomUtil.elements(tr.getParent(), "tr").indexOf(tr);
+                    }
+                }
+            }
         }
-        WTc wtc = WTc.tc(tc);
-        WTr wtr = WTr.tr(tr);
-        WTable wtable = WTable.table(table);
         boolean reload_table = false; //重新加载table(之前没有加载过会导致wtc获取不到)
-        if(null != tc && null == wtc){
-            reload_table = true;
+        List<WTc> wtcs = new ArrayList<>();
+        for(Element tc: tcs){
+            WTc wtc = WTc.tc(tc);
+            if(null == wtc && !reload_table){
+                doc.tables();
+                reload_table = true;
+                wtc = WTc.tc(tc);
+            }
+            if(null != wtc) {
+                wtcs.add(wtc);
+            }
         }
-        if(null != tr && null == wtr){
-            reload_table = true;
+        List<WTr> wtrs = new ArrayList<>();
+        for(Element tr: trs){
+            WTr wtr = WTr.tr(tr);
+            if(null == wtr && !reload_table){
+                doc.tables();
+                reload_table = true;
+                wtr = WTr.tr(tr);
+            }
+            if(null != wtr) {
+                wtrs.add(wtr);
+            }
         }
-        if(reload_table){
-            doc.tables();
-            wtc = WTc.tc(tc);
-            wtr = WTr.tr(tr);
-            wtable = WTable.table(table);
-        }
+
         var = fetchAttributeValue(text, "var");
         status = fetchAttributeValue(text, "status", "s");
         begin = BasicUtil.parseInt(fetchAttributeValue(text, "begin", "b"), 0);
         end = BasicUtil.parseInt(fetchAttributeValue(text, "end", "e"), null);
-        int row_index = -1; //模板行下标
-        int col_index = -1; //模板列下标
-        if(null != wtc){
-            col_index = wtr.getTcs().indexOf(wtc);
-        }else if(null != wtr){
-            row_index = wtable.getTrs().indexOf(wtr);
-            wtable.getSrc().remove(wtr.getSrc());
-        }
+
         if(null != items) {//遍历集合
             if (items instanceof Collection) {
                 Collection list = (Collection) items;
-                int index = 0;
-                Map<String, Object> map = new HashMap<>();
-                for (Object item : list) {
-                    if (null != begin && index < begin) {
+                if(!list.isEmpty()){
+                    int index = 0;
+                    Map<String, Object> map = new HashMap<>();
+                    for (Object item : list) {
+                        if (null != begin && index < begin) {
+                            index++;
+                            continue;
+                        }
+                        if (null != end && index > end) {
+                            break;
+                        }
+                        map.put("index", index);
+                        context.variable(var, item);
+                        context.variable(status, map);
+                        if(type == 1){
+                            //遍历td
+                            //在tr中添加td
+                            tc(tc_index+index*wtcs.size(), wtcs, context);
+                        } else if(type == 2){
+                            //遍历tr
+                            tr(tr_index+index*wtrs.size(), wtrs, context);
+                        } else if(null != body) {
+                            //遍历文本
+                            text(html, body);
+                        }
                         index++;
-                        continue;
                     }
-                    if (null != end && index > end) {
-                        break;
+                    //删除模板列、行
+                    for(WTc tc: wtcs){
+                        tc.remove();
                     }
-                    map.put("index", index);
-                    context.variable(var, item);
-                    context.variable(status, map);
-                    if(null != wtc){
-                        //遍历td
-                        //在tr中添加td
-                        tc(col_index++, index>0, wtr, wtc, body, context);
-                    } else if(null != wtr){
-                        //遍历tr
-                        tr(row_index++, wtable, wtr, context);
-                    } else if(null != body) {
-                        //遍历文本
-                        text(html, body);
+                    for(WTr tr: wtrs){
+                        tr.remove();
                     }
-                    index++;
                 }
             }
         }else{//按计数遍历
@@ -156,12 +181,12 @@ public class For extends AbstractTag implements Tag {
                     map.put("index", index);
                     context.variable(var, i);
                     context.variable(status, map);
-                    if(null != tc){
+                    if(type == 1){
                         //遍历td
-                        tc(col_index++, index>0, wtr, wtc, body, context);
-                    } else if(null != tr){
+                        tc(tc_index++, wtcs, context);
+                    } else if(type == 2){
                         //遍历tr
-                        tr(row_index++,  wtable, wtr, context);
+                        tr(tr_index++, wtrs, context);
                     } else if(null != body) {
                         //遍历文本
                         text(html, body);
@@ -172,6 +197,10 @@ public class For extends AbstractTag implements Tag {
         }
         return html.toString();
     }
+    //清除模板中的<aol:for <aol:a
+    private void clear(WTr tr){
+
+    }
     private void text(StringBuilder html, String body) throws Exception{
         String parse = DocxUtil.parseTag(doc, wts, body, context);
         parse = context.placeholder(parse);
@@ -180,38 +209,63 @@ public class For extends AbstractTag implements Tag {
 
     /**
      *
-     * @param index
-     * @param insert 是否插入新行,第一个不插入
-     * @param wtr
-     * @param template
-     * @param body
+     * @param index 开始下标
+     * @param templates
      * @throws Exception
      */
-    private void tc(int index, boolean insert, WTr wtr, WTc template, String body, Context context) throws Exception{
+    private void tc(int index, List<WTc> templates, Context context) throws Exception{
         //遍历td
         //在tr中添加td
-        String parse = DocxUtil.parseTag(doc, wts, body, context);
-        parse = context.placeholder(parse);
-        if(insert) {
-            wtr.insert(index, parse);
-        }else{
-            template.setText(parse);
+        WTr wtr = WTr.tr(templates.get(0).getSrc().getParent());
+        int size = templates.size();
+        int c = 0;
+        for(WTc template:templates){
+            String body = DocxUtil.text(template.getSrc());
+            //TODO 注意<aol:a 格式
+            if(c == 0 || c==size-1) {
+                if (body.startsWith("<")) {
+                    body = body.substring(body.indexOf(">") + 1);
+                }
+                body = body.replace("</aol:for>", "");
+            }
+            String parse = DocxUtil.parseTag(doc, wts, body, context);
+            parse = context.placeholder(parse);
+            wtr.insert(index + c, template,  parse);
+            c++;
         }
     }
-    private void tr(int index, WTable wtable, WTr template, Context context) throws Exception{
-        WTr tr = template.clone(true);
-        wtable.insert(index, tr);
-        List<WTc> wtcs = tr.getTcs();
-        for(WTc wtc:wtcs){
-            Element csrc = wtc.getSrc();
-            List<Element> cts = DomUtil.elements(csrc, "t");
-            String txt = DocxUtil.text(cts);
-            //删除for本身内容
-            String regex = "<aol:for.*/>";
-            txt = txt.replaceAll(regex, "");
-            String parse = DocxUtil.parseTag(doc, cts, txt, context);
-            parse = context.placeholder(parse);
-            wtc.setText(parse);
+    private void tr(int index, List<WTr> templates, Context context) throws Exception{
+        int size = templates.size();
+        WTable wtable = WTable.table(templates.get(0).getSrc().getParent());
+        int r = 0;
+        for(WTr template:templates){
+            WTr tr = template.clone(true);
+            wtable.insert(index+r, tr);
+            List<WTc> wtcs = tr.getTcs();
+            for(WTc wtc:wtcs){
+                Element csrc = wtc.getSrc();
+                List<Element> cts = DomUtil.elements(csrc, "t");
+                String txt = DocxUtil.text(cts);
+                //TODO 注意<aol:a 格式
+                //删除for本身内容
+                if(r == 0 || r==size-1) {
+                    String regex = "<aol:for.*/>";
+                    txt = txt.replaceAll(regex, "");
+                    regex = "<aol:for.*>";
+                    txt = txt.replaceAll(regex, "");
+                    txt = txt.replace("</aol:for>", "");
+                }
+                String parse = DocxUtil.parseTag(doc, cts, txt, context);
+                parse = context.placeholder(parse);
+                try {
+                    wtc.setText("");//清空原内容
+                    //Element box = DomUtil.element(wtc.getSrc(), "t").getParent();
+                    doc.parseHtml(wtc.getSrc(), null, parse);
+                }catch (Exception e){
+                    e.printStackTrace();
+                }
+            }
+            r ++;
         }
     }
 }

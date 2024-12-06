@@ -130,7 +130,10 @@ public abstract class AbstractTag implements Tag {
         try {
             body = RegularUtil.fetchTagBody(text, "aol:"+name);
             if (null == body && null != ref) {
-                body = RegularUtil.fetchTagBody(ref, "aol:ref");
+                body = RegularUtil.fetchTagBody(ref, "aol:pre");
+                if(null == body){
+                    body = RegularUtil.fetchTagBody(ref, "aol:"+name);
+                }
             }
         }catch (Exception e){
             e.printStackTrace();

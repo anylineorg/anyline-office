@@ -978,4 +978,7 @@ public class WTc extends WElement {
         }
         return tc;
     }
+    public String toString(){
+        return DocxUtil.text(src);
+    }
 }

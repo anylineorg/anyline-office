@@ -58,18 +58,7 @@ public class WDocument extends WElement {
     private LinkedHashMap<String, org.dom4j.Document> charts = new LinkedHashMap<>();
 
     private LinkedHashMap<String, Map<String, String>> styles = new LinkedHashMap<>();
-    /**
-     * 占位值
-     */
-    private LinkedHashMap<String, String> replaces = new LinkedHashMap<>();
-    /**
-     * 与replaces不同的是values中可以包含复杂结构
-     */
-    private LinkedHashMap<String, Object> variables = new LinkedHashMap<>();
-    /**
-     * 文本原样替换，不解析原文中的标签,没有${}的也不要添加
-     */
-    private LinkedHashMap<String, String> txt_replaces = new LinkedHashMap<>();
+    private Context context = new Context();
     private boolean autoMergePlaceholder = true;
     /**
      * word转html时遇到文件需要上传到文件服务器，并返回url
@@ -81,12 +70,14 @@ public class WDocument extends WElement {
     private Downloader downloader;
     private int listNum = 0;
 
+    private Map<String, Tag> tags = new HashMap<>();
+    private Map<String, String> predefines = new HashMap<>();
 
     public WDocument(File file){
         this.file = file;
     }
     public WDocument(String file){
-        this.file = new File(file);
+        this(new File(file));
     }
 
     public WDocument(File file, String charset){
@@ -96,6 +87,9 @@ public class WDocument extends WElement {
     public WDocument(String file, String charset){
         this.file = new File(file);
         this.charset = charset;
+    }
+    public Context context(){
+        return context;
     }
 
     private void load(){
@@ -123,9 +117,31 @@ public class WDocument extends WElement {
                     charts.put(name, DocumentHelper.parseText(ZipUtil.read(file, item, charset)));
                 }
             }
+            tags.put("agg", new Agg());
+            tags.put("avg", new Avg());
+            tags.put("checkbox", new CheckBox());
+            tags.put("concat", new Concat());
+            tags.put("date", new DateFormat());
+            tags.put("for", new For());
+            tags.put("group", new Group());
+            tags.put("if", new If());
+            tags.put("img", new Img());
+            tags.put("max", new Max());
+            tags.put("min", new Min());
+            tags.put("money", new MoneyFormat());
+            tags.put("number", new NumberFormat());
+            tags.put("select", new Select());
+            tags.put("set", new Set());
+            tags.put("sum", new Sum());
         }catch (Exception e){
             e.printStackTrace();
         }
+    }
+    public Tag tag(String name){
+        if(null == name){
+            return null;
+        }
+        return tags.get(name.toLowerCase());
     }
 
     /**
@@ -158,20 +174,10 @@ public class WDocument extends WElement {
     public void loadStyle(String html){
         Map<String,Map<String, String>> map = StyleParser.load(html);
         for(String key:map.keySet()){
-            this.styles.put(key, map.get(key));
+            styles.put(key, map.get(key));
         }
     }
-    private Map<String, Object> environment = new LinkedHashMap<>();
-    /**
-     * context值
-     * @param key key
-     * @param value value
-     * @return this
-     */
-    public WDocument environment(String key, Object value){
-        environment.put(key, value);
-        return this;
-    }
+
     /**
      * 设置占位符替换值 在调用save时执行替换<br/>
      * 注意如果不解析的话 不会添加自动${}符号 按原文替换,是替换整个文件的纯文件，包括标签名在内
@@ -179,164 +185,31 @@ public class WDocument extends WElement {
      * @param key 占位符
      * @param content 替换值
      */
-    public WDocument replace(boolean parse, String key, String content){
-        if(null == key && key.trim().length()==0){
-            return this;
-        }
-        if(parse) {
-            replaces.put(key, content);
-        }else{
-            txt_replaces.put(key, content);
-        }
-        return this;
+    public Context replace(boolean parse, String key, String content){
+        return context.replace(parse, key, content);
     }
 
-    public WDocument variable(String key, Object value){
-        variables.put(key, value);
-        return this;
+    public Context variable(String key, Object value){
+        return context.variable(key, value);
     }
-    public LinkedHashMap<String, Object> variables(){
-        return variables;
+
+    public Context replace(String key, String content){
+        return context.replace(key, content);
     }
-    public WDocument replace(String key, String content){
-        return replace(true, key, content);
+    public Context replace(boolean parse, String key, File... words){
+        return context.replace(parse, key, words);
     }
-    public WDocument replace(boolean parse, String key, File ... words){
-        return replace(parse, key, BeanUtil.array2list(words));
+    public Context replace(String key, File ... words){
+        return context.replace(key, words);
     }
-    public WDocument replace(String key, File ... words){
-        return replace(true, key, BeanUtil.array2list(words));
-    }
-    public WDocument replace(boolean parse, String key, List<File> words){
-        if(null != words) {
-            StringBuilder content = new StringBuilder();
-            for(File word:words) {
-                content.append("<word>").append(word.getAbsolutePath()).append("</word>");
-            }
-            if(parse) {
-                replaces.put(key, content.toString());
-            }else{
-                txt_replaces.put(key, content.toString());
-            }
-        }
-        return this;
+    public Context replace(boolean parse, String key, List<File> words){
+        return context.replace(parse, key, words);
     }
 
     public void replace(String key, List<File> words){
-        replace(true, key, words);
+        context.replace(key, words);
     }
 
-    public LinkedHashMap<String, String> getReplaces(){
-        return replaces;
-    }
-    public LinkedHashMap<String, String> getTextReplaces(){
-        return txt_replaces;
-    }
-
-
-    public Object data(String key){
-        Object data = key;
-        if(BasicUtil.checkEl(key)){
-            //${users}
-            key = key.substring(2, key.length() - 1);
-            data = variables.get(key);
-            if(null == data){
-                data = replaces.get(key);
-            }
-            if(null == data){
-                data = txt_replaces.get(key);
-            }
-
-            if(null == data){
-                if(key.contains(".")){
-                    //user.dept.name
-                    String[] ks = key.split("\\.");
-                    int size = ks.length;
-                    if(size > 1) {
-                        data = variables.get(ks[0]);
-                        for (int i = 1; i < size; i++) {
-                            String k = ks[i];
-                            if(null == data){
-                                break;
-                            }
-                            data = BeanUtil.getFieldValue(data, k);
-                        }
-                    }
-                }
-            }
-        }else if(key.startsWith("{") && key.endsWith("}")){
-            key = key.replace("{", "").replace("}", "");
-            data = key;
-            if(key.contains(",")){
-                String[] ks = key.split(",");
-                List<String> list = new ArrayList<>();
-                for(String k:ks){
-                    //{0:关,1:开}
-                    if(k.contains(":")){
-                        String[] kv = k.split(":");
-                        if(kv.length ==2){
-                            Map map = new HashMap();
-                            map.put(kv[0], kv[1]);
-                        }
-                    }else {
-                        //{FI,CO,HR}
-                        list.add(k);
-                    }
-                }
-                data = list;
-            }
-        }
-        if(null == data){
-            data = "";
-        }
-        return data;
-    }
-    /**
-     * 替换占位符
-     * @param text 原文
-     * @return String
-     */
-    public String placeholder(String text){
-        String result = text;
-        for(String key:replaces.keySet()){
-            String value = replaces.get(key);
-            if(null == value){
-                value = "";
-            }
-            result = result.replace("${" + key + "}", value);
-        }
-        for(String key:txt_replaces.keySet()){
-            String value = txt_replaces.get(key);
-            if(null == value){
-                value = "";
-            }
-            result = result.replace("${" + key + "}", value);
-        }
-        for(String key:variables.keySet()){
-            Object value = variables.get(key);
-            if(null == value){
-                value = "";
-            }
-            result = result.replace("${" + key + "}", value.toString());
-        }
-        //检测复合占位符
-        try {
-            List<String> ks = RegularUtil.fetch(text, "\\$\\{.*?\\}");
-            for(String k:ks){
-                Object value = data(k);
-                if(null == value){
-                    value = "";
-                }
-                result = result.replace(k, value.toString());
-            }
-        }catch (Exception e){
-            e.printStackTrace();
-        }
-        if(null == result){
-            result = "";
-        }
-        return result;
-    }
     public void save(){
         save(Charset.forName("UTF-8"));
     }
@@ -350,22 +223,20 @@ public class WDocument extends WElement {
             //替换占位符前先解析标签
             tag();
             //执行替换
-            replace(src, replaces);
+            replace(src, context);
             Map<String, String> zip_replaces = new HashMap<>();
             for(String name:footers.keySet()){
                 Document doc = footers.get(name);
                 Element element = doc.getRootElement();
-                replace(element, replaces);
+                replace(element, context);
                 String txt = DomUtil.format(doc);
-                txt = BasicUtil.replace(txt, txt_replaces);
                 zip_replaces.put("word/" + name + ".xml", txt);
             }
             for(String name:headers.keySet()){
                 Document doc = headers.get(name);
                 Element element = doc.getRootElement();
-                replace(element, replaces);
+                replace(element, context);
                 String txt = DomUtil.format(doc);
-                txt = BasicUtil.replace(txt, txt_replaces);
                 zip_replaces.put("word/" + name + ".xml", txt);
             }
             for(String name:charts.keySet()){
@@ -373,7 +244,7 @@ public class WDocument extends WElement {
                 //Element element = doc.getRootElement();
                 //replace(element, replaces);
                 String txt = DomUtil.format(doc);
-                txt = BasicUtil.replace(txt, txt_replaces);
+                txt = BasicUtil.replace(txt, context.texts());
                 zip_replaces.put("word/charts/" + name + ".xml", txt);
             }
             //检测内容类型
@@ -381,7 +252,7 @@ public class WDocument extends WElement {
             //合并列的表格,如果没有设置宽度,在wps中只占一列,需要在表格中根据总列数添加
             checkMergeCol();
             String txt = DomUtil.format(doc);
-            txt = BasicUtil.replace(txt, txt_replaces);
+            txt = BasicUtil.replace(txt, context.texts());
             zip_replaces.put("word/document.xml", txt);
             zip_replaces.put("word/_rels/document.xml.rels", DomUtil.format(rels));
             ZipUtil.replace(file, zip_replaces, charset);
@@ -395,35 +266,99 @@ public class WDocument extends WElement {
      */
     public void tag(){
         load();
+        predefine();
         //全部t标签
         List<Element> ts = DomUtil.elements(src, "t");
         int size = ts.size();
+        List<Element> removes = new ArrayList<>();
         for(int i = 0; i < size; i++){
             Element t = ts.get(i);
-            String txt = t.getTextTrim();
+            String txt = t.getText();
             if(txt.contains("<")){
+                List<Element> items = new ArrayList<>();
+                items.add(t);
                 if(!isFullTag(txt)){//如果不是完整标签 继续拼接下一个直到完成或失败
-                    List<Element> items = tag(txt, ts, i+1);
+                    items = tag(txt, ts, i+1);
                     if(!items.isEmpty()) {
                         items.add(0, t);
-                        Element last = items.get(items.size() - 1);
+                        int isize = items.size();
+                        Element last = items.get(isize - 1);
                         i = ts.indexOf(last);
-                        txt = text(items);
+                        txt = DocxUtil.text(items);
+                        //t.setText(txt);
+                        for(int r=1; r<isize; r++){
+                            removes.add(items.get(r));
+                        }
                     }else{
                         continue;
                     }
                 }
                 try {
-                    System.out.println("解析标签:"+txt);
-                    txt = parseTag(t, txt, variables);
+                    txt = DocxUtil.parseTag(this, items, txt, context);
                     t.setText(txt);
                 }catch (Exception e){
                     e.printStackTrace();
                 }
             }
         }
+        for(Element remove:removes){
+            remove.setText("");
+        }
     }
-
+    public String ref(String id){
+        return predefines.get(id);
+    }
+    public void predefine(String id, String value){
+        predefines.put(id, value);
+    }
+    /**
+     * 解析预定义标签
+     */
+    private void predefine(){
+        List<Element> ts = DomUtil.elements(src, "t");
+        int size = ts.size();
+        for(int i = 0; i < size; i++){
+            Element t = ts.get(i);
+            String txt = t.getText();
+            if(txt.contains("<")){
+                List<Element> items = new ArrayList<>();
+                items.add(t);
+                if(!isFullTag(txt)){//如果不是完整标签 继续拼接下一个直到完成或失败
+                    items = tag(txt, ts, i+1);
+                    if(!items.isEmpty()) {
+                        items.add(0, t);
+                        int isize = items.size();
+                        Element last = items.get(isize - 1);
+                        i = ts.indexOf(last);
+                        txt = DocxUtil.text(items);
+                    }else{
+                        continue;
+                    }
+                }
+                try {
+                    List<String> tags = RegularUtil.fetchOutTag(txt);
+                    for(String tag:tags){
+                        //<aol:pre id="a"/>
+                        //<aol:date pre="b"/>
+                        tag = tag.replace("”","\"").trim();
+                        String pre = RegularUtil.fetchAttributeValue(tag, "pre");
+                        String name = RegularUtil.cut("aol:", " ");
+                        if(null == name){
+                            name = RegularUtil.cut("aol:", "/>");
+                        }
+                        if("pre".equals(name)){
+                            pre = RegularUtil.fetchAttributeValue(tag, "id");
+                        }
+                        if(null != pre) {
+                            predefines.put(pre, tag);
+                        }
+                    }
+                }catch (Exception e){
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
 
     /**
      * 获取最外层tag所在的t
@@ -445,7 +380,7 @@ public class WDocument extends WElement {
                 continue;
             }
             String name = null;
-            if(full.length() > 10){
+            if(full.length() > 5){
                 if(!full.trim().startsWith("<aol:")){
                     //不是标签
                     return new ArrayList<>();
@@ -484,95 +419,14 @@ public class WDocument extends WElement {
         List<String> tags = RegularUtil.fetchOutTag(txt);
         return !tags.isEmpty();
     }
-    private String text(List<Element> ts){
-        StringBuilder builder = new StringBuilder();
-        for(Element t:ts){
-            String txt = t.getText();
-            if(null != txt) {
-                builder.append(txt);
-            }
-        }
-        return builder.toString();
-    }
-    public String parseTag(Element t, String txt, Map<String, Object> variables) throws Exception{
-        if(null == txt){
-            return "";
-        }
-        txt = txt.replace("”", "\"");
-        //String reg = "(?i)(<aol:(\\w+)[^<]*?>)[^<]*(</aol:\\2>)";
-        //这里 不要把内层标签独立拆出来，因为外层标签可能 会设置新变量值影响内层
-        List<String> tags = RegularUtil.fetchOutTag(txt);
-        for(String tag:tags){
-            //标签name如<aol:img 中的img
-            String name = RegularUtil.cut(tag, "aol:", " ");
-            Tag instance = null;
-            //先执行外层的 外层需要设置新变量值
-            if(null == name){
-                log.error("未识别的标签:{}", tag);
-            }else if("for".equalsIgnoreCase(name)){
-                instance = new For();
-            } else if("if".equalsIgnoreCase(name)){
-                instance = new If();
-            } else if("set".equalsIgnoreCase(name)){
-                instance = new Set();
-            } else if("img".equalsIgnoreCase(name)){
-                instance = new Img();
-            } else if("date".equalsIgnoreCase(name)){
-                instance = new DateFormat();
-            } else if("number".equalsIgnoreCase(name)){
-                instance = new NumberFormat();
-            } else if("money".equalsIgnoreCase(name)){
-                instance = new MoneyFormat();
-            } else if("checkbox".equalsIgnoreCase(name)){
-                instance = new CheckBox();
-            } else{
-                log.error("未识别的标签:{}", name);
-            }
-            String html = "";
-            if(null != instance) {
-                //复制占位值
-                instance.init(this);
-                instance.wt(t);
-                instance.variable(variables);
-                //把 aol标签解析成html标签 下一步会解析html标签
-                html = instance.parse(tag);
-            }
-            //txt = txt.replace(tag, html);
-            txt = BasicUtil.replaceFirst(txt, tag, html);
-            //如果有子标签 应该在父标签中一块解析完
-            /*if(txt.contains("<aol:")){
-                txt = parseTag(txt, variables);
-            }*/
-        }
-        return txt;
-    }
 
-    /**
-     * 包含key的下一个element,如果中间遇到其他内容则中断搜索
-     * @param elements 集合
-     * @param start 开始搜索位置
-     * @param key 关键字
-     * @return Element
-     */
-    public List<Element> completion(List<Element> elements, int start, String key){
-        List<Element> list = new ArrayList<>();
-        int size = elements.size();
-        for(int i = start; i < size; i++){
-            Element element = elements.get(i);
-            String txt = element.getTextTrim();
-            if(txt.startsWith(key)){
-
-            }
-        }
-        return list;
-    }
     /**
      * 合并占位符 ${key} 拆分到3个t中的情况
      * 调用完replace后再调用当前方法，因为需要用到replace里提供的占位符列表
      */
     public void mergePlaceholder(){
         List<String> placeholders = new ArrayList<>();
-        placeholders.addAll(replaces.keySet());
+        placeholders.addAll(context.replaces().keySet());
         mergePlaceholder(placeholders);
     }
     /**
@@ -714,14 +568,12 @@ public class WDocument extends WElement {
      * 5.混合 需要先拆分开<br/>
      *
      * @param box 最外层元素
-     * @param replaces k:v
+     * @param context context
      */
-    public void replace(Element box, Map<String, String> replaces){
+    public void replace(Element box, Context context){
         List<Element> ts = DomUtil.elements(box, "t");
         for(Element t:ts){
             String txt = t.getTextTrim();
-
-            ts = DomUtil.elements(box, "t");
             List<String> flags = DocxUtil.splitKey(txt);
             if(flags.size() == 0){
                 continue;
@@ -747,14 +599,7 @@ public class WDocument extends WElement {
                 boolean all_txt = true;
                 for(String flag:flags){
                     if(BasicUtil.checkEl(flag)) {
-                        String key = flag.substring(2, flag.length() - 1);
-                        String content = replaces.get(key);
-                        if (null == content) {
-                            Object var = BeanUtil.value(variables, key);
-                            if (null != var) {
-                                content = var.toString();
-                            }
-                        }
+                        String content = context.string(flag);
                         if(null != content && content.contains("<") && content.contains(">")){
                             all_txt = false;
                             break;
@@ -766,14 +611,7 @@ public class WDocument extends WElement {
                     for(String flag:flags){
                         String content = flag;
                         if (BasicUtil.checkEl(flag)) {
-                            String key = flag.substring(2, flag.length() - 1);
-                            content = replaces.get(key);
-                            if (null == content) {
-                                Object var = BeanUtil.value(variables, key);
-                                if (null != var) {
-                                    content = var.toString();
-                                }
-                            }
+                            content = context.string(flag);
                         }
                         if(null != content){
                             builder.append(content);
@@ -788,14 +626,7 @@ public class WDocument extends WElement {
                         String flag = flags.get(i);
                         String content = flag;
                         if (BasicUtil.checkEl(flag)) {
-                            String key = flag.substring(2, flag.length() - 1);
-                            content = replaces.get(key);
-                            if (null == content) {
-                                Object var = BeanUtil.value(variables, key);
-                                if (null != var) {
-                                    content = var.toString();
-                                }
-                            }
+                            content = context.string(flag);
                         }
                         List<Element> list = parseHtml(r, prev, content);
                         if(!list.isEmpty()){
@@ -807,9 +638,10 @@ public class WDocument extends WElement {
         }
         List<Element> bookmarks = DomUtil.elements(box, "bookmarkStart");
         for(Element bookmark:bookmarks){
-            replaceBookmark(bookmark, replaces);
+            replaceBookmark(bookmark, context);
         }
     }
+
     /**
      * 合并列的表格,如果没有设置宽度,在wps中只占一列,需要在表格中根据总列数添加
      * w:tblGrid
@@ -1150,11 +982,11 @@ public class WDocument extends WElement {
      * @param start 开始书签
      * @replaces K:v
      */
-    private void replaceBookmark(Element start, Map<String,String> replaces){
+    private void replaceBookmark(Element start, Context context){
         String id = start.attributeValue("id");
         Element end =  DomUtil.element(getSrc(), "bookmarkEnd","id",id);
         String name = start.attributeValue("name");
-        String content = replaces.get(name);
+        String content = context.string(name);
         if(null == content){
             return;
         }
@@ -1196,7 +1028,7 @@ public class WDocument extends WElement {
      * @param html html
      * @return list
      */
-    private List<Element> parseHtml(Element box, Element prev, String html){
+    public List<Element> parseHtml(Element box, Element prev, String html){
         List<Element> list = new ArrayList<Element>();
         if(null == html || html.trim().length()==0){
             return list;
@@ -1490,7 +1322,7 @@ public class WDocument extends WElement {
             text = HtmlUtil.display(text);
         }
         t.setText(text.trim());
-        if(prev.getParent() == t.getParent()) {
+        if(null != prev && prev.getParent() == t.getParent()) {
             DocxUtil.after(t, prev);
         }
         return t;
@@ -1749,10 +1581,7 @@ public class WDocument extends WElement {
         //占位符
         if(src.startsWith("${")){
             String key = src.substring(2, src.length() - 1);
-            src = replaces.get(key);
-            if(null == src){
-                src = txt_replaces.get(key);
-            }
+            src = context.replaces().get(key);
         }
         File tmpdir = new File(System.getProperty("java.io.tmpdir"));
         File img = null;
@@ -1929,7 +1758,7 @@ public class WDocument extends WElement {
         prstGeom.addElement("a:avLst");
 
         DocxUtil.after(r, prev);
-        if(prev.getParent() == r){
+        if(null != prev && prev.getParent() == r){
             DocxUtil.after(draw, prev);
         }
         return r;

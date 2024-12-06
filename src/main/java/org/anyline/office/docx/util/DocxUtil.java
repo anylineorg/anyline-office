@@ -479,6 +479,13 @@ public class DocxUtil {
         return list;
     }
 
+    public static String tagName(String text, String prefix){
+        String name = RegularUtil.cut(text, prefix, " ");;
+        if(null == name){
+            name = RegularUtil.cut(text, prefix, "/");
+        }
+        return name;
+    }
     public static String parseTag(WDocument doc, List<Element> ts, String txt, Context context) throws Exception{
         if(null == txt){
             return "";
@@ -489,26 +496,66 @@ public class DocxUtil {
         List<String> tags = RegularUtil.fetchOutTag(txt);
         for(String tag:tags){
             //标签name如<aol:img 中的img
-            String name = RegularUtil.cut(tag, "aol:", " ");
-            Tag instance = null;
-            //先执行外层的 外层需要设置新变量值
-            if(null == name){
-                log.error("未识别的标签:{}", tag);
+            String name = tagName(tag, "aol:");
+            boolean isPre = false;
+            if("pre".equals(name)){
+                //<aol:pre id="c"/>
+                isPre = true;
             }else{
-                instance = doc.tag(name);
-            }
-            if(null == instance){
-                log.error("未识别的标签:{}", name);
+                //<aol:date pre="c"
+                String preId = RegularUtil.fetchAttributeValue(tag, "pre");
+                if(null != preId){
+                    isPre = true;
+                }
             }
             String html = "";
-            if(null != instance) {
-                //复制占位值
-                instance.init(doc);
-                instance.wts(ts);
-                instance.context(context);
-                //把 aol标签解析成html标签 下一步会解析html标签
-                html = instance.parse(tag);
-                instance.release();
+            if(!isPre) {
+                //不是预定义
+                String parse = tag; //解析的标签体
+                Tag instance = null;
+                //先执行外层的 外层需要设置新变量值
+                if (null == name) {
+                    log.error("未识别的标签格式:{}", tag);
+                } else {
+                    //<aol:date format="" value=""/>
+                    instance = doc.tag(name);
+                }
+                String ref_text = null;
+                String refId = RegularUtil.fetchAttributeValue(tag, "ref");
+                if (null != refId) {
+                    ref_text = doc.ref(refId);
+                }
+                if(null == instance) {
+                    //<aol:c/>
+                    refId = name;
+                    String define = doc.ref(refId);
+                    ref_text = define;
+                    if (null != define) {
+                        //<aol:c/>
+                        //<aol:date ref="c" format="" value=""/>
+                        parse = define;
+                        name = tagName(parse, "aol:");
+                        if (null == name) {
+                            log.error("未识别的标签格式:{}", parse);
+                        } else {
+                            instance = doc.tag(name);
+                        }
+                    }
+                }
+
+                if (null == instance) {
+                    log.error("未识别的标签名称:{}", name);
+                }
+                if (null != instance) {
+                    //复制占位值
+                    instance.init(doc);
+                    instance.wts(ts);
+                    instance.context(context);
+                    instance.ref(ref_text);
+                    //把 aol标签解析成html标签 下一步会解析html标签
+                    html = instance.parse(tag);
+                    instance.release();
+                }
             }
             //txt = txt.replace(tag, html);
             txt = BasicUtil.replaceFirst(txt, tag, html);
@@ -790,7 +837,7 @@ public class DocxUtil {
             Node node = nodes.next();
             int type = node.getNodeType();
             if(type == 3){
-                text += node.getText().trim();
+                text += node.getText();
             }else{
                 text += text((Element)node);
             }
