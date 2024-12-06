@@ -208,6 +208,11 @@ public class WTr extends WElement {
     public void remove(Element tc){
         remove(tc(tc));
     }
+
+    public void remove(){
+        src.getParent().remove(src);
+        parent.getTrs().remove(this);
+    }
     /**
      * 创建行 并复制模板样式
      * @param template 模板
@@ -674,5 +679,12 @@ public class WTr extends WElement {
         t(builder, lvl);
         builder.append("</tr>");
         return builder.toString();
+    }
+    public String toString(){
+        List<String> list = new ArrayList<>();
+        for(WTc tc:wtcs){
+            list.add(tc.toString());
+        }
+        return BasicUtil.concat(list, "|");
     }
 }
