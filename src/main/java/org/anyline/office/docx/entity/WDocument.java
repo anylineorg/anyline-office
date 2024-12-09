@@ -887,7 +887,7 @@ public class WDocument extends WElement {
      * @return tables
      */
     public List<WTable> tables(String content){
-        return tables(true, content);
+        return tables(false, content);
     }
 
     /**
