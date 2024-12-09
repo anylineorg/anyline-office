@@ -138,7 +138,8 @@ public class WElement {
     }
 
     /**
-     * 获取每个t标签中的文本，注意经常会发生word自己把文字拆成多个t标签，
+     * 获取每个t标签中的文本 不限层级<br/>
+     * 注意经常会发生word自己把文字拆成多个t标签<br/>
      * 可以调用getTexts()返回一个完整文本
      * @return List
      */
@@ -152,7 +153,8 @@ public class WElement {
     }
 
     /**
-     * 合并所有t标签文本成一个文本返回,如果要分开返回可以调用getTextList
+     * 合并所有t标签文本成一个文本返回 不限层级<br/>
+     * 如果要分开返回可以调用getTextList
      * @return String
      */
     public String getTexts(){
@@ -167,7 +169,9 @@ public class WElement {
     }
 
     /**
-     * 查找直接子级t标签文本，tc中可能有多个 t标签，可以调用getTextList或getText返回所有t标签文本(不限层级)
+     * 查找直接子级t标签文本<br/>
+     * tc中可能有多个 t标签<br/>
+     * 可以调用getTextList或getText返回所有t标签文本(不限层级)
      * @return String
      */
     public String getText(){

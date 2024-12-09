@@ -882,12 +882,22 @@ public class WDocument extends WElement {
     }
 
     /**
-     * 获取body下的table
+     * 获取body下的table<br/>
      * @param content 根据内容定位
      * @return tables
      */
     public List<WTable> tables(String content){
-        List<WTable> all = tables();
+        return tables(true, content);
+    }
+
+    /**
+     * 获取body下的table<br/>
+     * @param recursion 是否不限层级(false:只取第一层)
+     * @param content 根据内容定位
+     * @return tables
+     */
+    public List<WTable> tables(boolean recursion, String content){
+        List<WTable> all = tables(recursion);
         List<WTable> list = new ArrayList<>();
         for(WTable table:all){
             String txt = table.getTexts();
@@ -908,6 +918,11 @@ public class WDocument extends WElement {
         }
         return result;
     }
+    /**
+     * 获取body下的table<br/>
+     * 注意只获取第一层，如果需要不限层级应该调用tables(true)
+     * @return tables
+     */
     public List<WTable> tables(){
         List<WTable> tables = new ArrayList<>();
         List<Element> elements = getSrc().elements("tbl");
