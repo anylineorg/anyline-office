@@ -33,16 +33,19 @@ public class If extends AbstractTag implements Tag {
     }
     public String parse(String text) throws Exception{
         String html = "";
-        String test = fetchAttributeValue(text, "test", "t");
-        String value = fetchAttributeValue(text, "value", "v");
+
+        String head = RegularUtil.cut(text, RegularUtil.TAG_BEGIN, ">");
+        String test = fetchAttributeValue(head, "test", "t");
+        String value = fetchAttributeValue(head, "value", "v");
+        String var = fetchAttributeValue(head, "var");
         //false时是否删除
         boolean remove = BasicUtil.parseBoolean(fetchAttributeValue(text, "remove", "r"), false);
         //删除的对象 tc/td 或 tr
-        String scope = fetchAttributeValue(text, "scope", "s");
+        String scope = fetchAttributeValue(head, "scope", "s");
         if(BasicUtil.checkEl(test)){
             test = test.substring(2, test.length()-1);
         }
-        String elseValue = fetchAttributeValue(text, "else", "e");
+        String elseValue = fetchAttributeValue(head, "else", "e");
         if(null == elseValue){
             elseValue = "";
         }
@@ -56,34 +59,38 @@ public class If extends AbstractTag implements Tag {
         } catch (OgnlException e) {
             e.printStackTrace();
         }
-        if(chk){
-            if(BasicUtil.isNotEmpty(value)){
-                //如果有value值
-                html = value;
-            } else {
-                //test中会有>影响表达式
-                text = text.replace(test, "");
-                String body = RegularUtil.fetchTagBody(text, "aol:if");
-                if(body.contains("<aol:")){
-                    body = DocxUtil.parseTag(doc, wts, body, context);
+        if(BasicUtil.isEmpty(var)) {
+            if (chk) {
+                if (BasicUtil.isNotEmpty(value)) {
+                    //如果有value值
+                    html = value;
+                } else {
+                    //test中会有>影响表达式
+                    text = text.replace(test, "");
+                    String body = RegularUtil.fetchTagBody(text, "aol:if");
+                    if (body.contains("<aol:")) {
+                        body = DocxUtil.parseTag(doc, wts, body, context);
+                    }
+                    html = body;
                 }
-                html = body;
+            } else {
+                html = elseValue;
+                if (remove) {//删除行或行
+                    if ("tc".equalsIgnoreCase(scope) || "td".equalsIgnoreCase(scope)) {
+                        Element tc = DocxUtil.getParent(wts.get(0), "tc");
+                        Element tr = tc.getParent();
+                        WTr wtr = WTr.tr(tr);
+                        wtr.remove(tc);
+                    } else if ("tr".equalsIgnoreCase(scope)) {
+                        Element tr = DocxUtil.getParent(wts.get(0), "tr");
+                        Element table = tr.getParent();
+                        WTable wtable = WTable.table(table);
+                        wtable.remove(tr);
+                    }
+                }
             }
         }else{
-            html = elseValue;
-            if(remove){//删除行或行
-                if("tc".equalsIgnoreCase(scope) || "td".equalsIgnoreCase(scope)){
-                    Element tc = DocxUtil.getParent(wts.get(0), "tc");
-                    Element tr = tc.getParent();
-                    WTr wtr = WTr.tr(tr);
-                    wtr.remove(tc);
-                }else if("tr".equalsIgnoreCase(scope)){
-                    Element tr = DocxUtil.getParent(wts.get(0), "tr");
-                    Element table = tr.getParent();
-                    WTable wtable = WTable.table(table);
-                    wtable.remove(tr);
-                }
-            }
+            context.variable(var, chk);
         }
         if(null == html){
             html = "";
