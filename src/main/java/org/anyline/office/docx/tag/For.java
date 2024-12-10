@@ -16,12 +16,15 @@
 
 package org.anyline.office.docx.tag;
 
+import org.anyline.adapter.KeyAdapter;
+import org.anyline.entity.DataSet;
 import org.anyline.office.docx.entity.Context;
 import org.anyline.office.docx.entity.WTable;
 import org.anyline.office.docx.entity.WTc;
 import org.anyline.office.docx.entity.WTr;
 import org.anyline.office.docx.util.DocxUtil;
 import org.anyline.util.BasicUtil;
+import org.anyline.util.BeanUtil;
 import org.anyline.util.DomUtil;
 import org.anyline.util.regular.RegularUtil;
 import org.dom4j.Element;
@@ -35,7 +38,14 @@ public class For extends AbstractTag implements Tag {
     private Integer begin;
     private Integer end;
     public void release(){
-        super.release();
+        super.release(); //不要清空context下个循环还要用
+        /*if(null != var) {
+            context.variables().remove(var);
+        }
+        if(null != status){
+            context.variables().remove(status);
+            }
+        */
         items = null;
         var = null;
         status = null;
@@ -65,14 +75,16 @@ public class For extends AbstractTag implements Tag {
         >${samp.CODE}</al:for>
         */
         StringBuilder html = new StringBuilder();
-        String items_key = fetchAttributeValue(text, "items", "is");
+        //提取最外层标签属性 避免取到下一层属性
+        String head = RegularUtil.cut(text, RegularUtil.TAG_BEGIN, ">");
+        String items_key = fetchAttributeValue(head, "items", "is");
         if(null == items_key){
-            items_key = fetchAttributeValue(text, "data", "d");
+            items_key = fetchAttributeValue(head, "data", "d");
         }
         if(null != items_key) {
             items = context.data(items_key);
         }
-        String scope = fetchAttributeValue(text, "scope", "sp");
+        String scope = fetchAttributeValue(head, "scope", "sp");
 
         String body = RegularUtil.fetchTagBody(text, "aol:for");
         int type = 0; //0:txt 1:tc 2:tr
@@ -128,17 +140,27 @@ public class For extends AbstractTag implements Tag {
                 wtrs.add(wtr);
             }
         }
-
-        var = fetchAttributeValue(text, "var");
-        status = fetchAttributeValue(text, "status", "s");
-        begin = BasicUtil.parseInt(fetchAttributeValue(text, "begin", "b"), 0);
-        end = BasicUtil.parseInt(fetchAttributeValue(text, "end", "e"), null);
+        var = fetchAttributeValue(head, "var");
+        status = fetchAttributeValue(head, "status", "s");
+        begin = BasicUtil.parseInt(fetchAttributeValue(head, "begin", "b"), 0);
+        end = BasicUtil.parseInt(fetchAttributeValue(head, "end", "e"), null);
 
         if(null != items) {//遍历集合
+            if(items instanceof String){
+                String str = (String) items;
+                if(str.startsWith("[")){
+                    if(str.startsWith("[{")){
+                        items = DataSet.parseJson(KeyAdapter.KEY_CASE.SRC, str);
+                    }
+                }else{
+                    items = BeanUtil.array2list(str.split(","));
+                }
+            }
             if (items instanceof Collection) {
                 Collection list = (Collection) items;
                 if(!list.isEmpty()){
                     int index = 0;
+                    Context item_context = context.clone();
                     Map<String, Object> map = new HashMap<>();
                     for (Object item : list) {
                         if (null != begin && index < begin) {
@@ -149,18 +171,18 @@ public class For extends AbstractTag implements Tag {
                             break;
                         }
                         map.put("index", index);
-                        context.variable(var, item);
-                        context.variable(status, map);
+                        item_context.variable(var, item);
+                        item_context.variable(status, map);
                         if(type == 1){
                             //遍历td
                             //在tr中添加td
-                            tc(tc_index+index*wtcs.size(), wtcs, context);
+                            tc(tc_index+index*wtcs.size(), wtcs, item_context);
                         } else if(type == 2){
                             //遍历tr
-                            tr(tr_index+index*wtrs.size(), wtrs, context);
+                            tr(tr_index+index*wtrs.size(), wtrs, item_context);
                         } else if(null != body) {
                             //遍历文本
-                            text(html, body);
+                            text(html, body, item_context);
                         }
                         index++;
                     }
@@ -177,19 +199,20 @@ public class For extends AbstractTag implements Tag {
             if(null != end){
                 Map<String, Object> map = new HashMap<>();
                 int index = 0;
+                Context item_context = context.clone();
                 for(int i=begin; i<=end; i++){
                     map.put("index", index);
-                    context.variable(var, i);
-                    context.variable(status, map);
+                    item_context.variable(var, i);
+                    item_context.variable(status, map);
                     if(type == 1){
                         //遍历td
-                        tc(tc_index++, wtcs, context);
+                        tc(tc_index++, wtcs, item_context);
                     } else if(type == 2){
                         //遍历tr
-                        tr(tr_index++, wtrs, context);
+                        tr(tr_index++, wtrs, item_context);
                     } else if(null != body) {
                         //遍历文本
-                        text(html, body);
+                        text(html, body, item_context);
                     }
                     index++;
                 }
@@ -201,7 +224,7 @@ public class For extends AbstractTag implements Tag {
     private void clear(WTr tr){
 
     }
-    private void text(StringBuilder html, String body) throws Exception{
+    private void text(StringBuilder html, String body, Context context) throws Exception{
         String parse = DocxUtil.parseTag(doc, wts, body, context);
         parse = context.placeholder(parse);
         html.append(parse);
@@ -222,6 +245,7 @@ public class For extends AbstractTag implements Tag {
         for(WTc template:templates){
             String body = DocxUtil.text(template.getSrc());
             //TODO 注意<aol:a 格式
+            //TODO 只清空当前层for
             if(c == 0 || c==size-1) {
                 if (body.startsWith("<")) {
                     body = body.substring(body.indexOf(">") + 1);
@@ -247,6 +271,7 @@ public class For extends AbstractTag implements Tag {
                 List<Element> cts = DomUtil.elements(csrc, "t");
                 String txt = DocxUtil.text(cts);
                 //TODO 注意<aol:a 格式
+                //TODO 只清空当前层for
                 //删除for本身内容
                 if(r == 0 || r==size-1) {
                     String regex = "<aol:for.*/>";
