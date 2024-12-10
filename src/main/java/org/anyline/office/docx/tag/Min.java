@@ -16,9 +16,36 @@
 
 package org.anyline.office.docx.tag;
 
+import org.anyline.entity.DataRow;
+import org.anyline.entity.DataSet;
+import org.anyline.util.BasicUtil;
+import org.anyline.util.regular.RegularUtil;
+
 public class Min extends AbstractTag implements Tag{
 
     public void release(){
         super.release();
+    }
+    public String parse(String text) throws Exception{
+        String html = "";
+        String head = RegularUtil.cut(text, RegularUtil.TAG_BEGIN, ">");
+        String items_key = fetchAttributeValue(head, "items", "data", "d", "is");
+        String property = fetchAttributeValue(head, "property", "p");
+        String var = fetchAttributeValue(head, "var", "v");
+        Object data = context.data(items_key);
+        if(null != data){
+            if(data instanceof DataSet){
+                DataSet set = (DataSet)data;
+                DataRow min = set.min(property);
+                if (null != min) {
+                    if(BasicUtil.isEmpty(var)) {
+                            html = min.getString(property);
+                    }else{
+                        context.variable(var, min);
+                    }
+                }
+            }
+        }
+        return html;
     }
 }
