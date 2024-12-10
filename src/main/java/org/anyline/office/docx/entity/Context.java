@@ -16,6 +16,8 @@
 
 package org.anyline.office.docx.entity;
 
+import org.anyline.adapter.KeyAdapter;
+import org.anyline.entity.DataRow;
 import org.anyline.util.BasicUtil;
 import org.anyline.util.BeanUtil;
 import org.anyline.util.regular.RegularUtil;
@@ -63,7 +65,9 @@ public class Context {
     }
 
     public Context variable(String key, Object value){
-        variables.put(key, value);
+        if(null != key) {
+            variables.put(key, value);
+        }
         return this;
     }
 
@@ -107,6 +111,10 @@ public class Context {
         return null;
     }
     public Object data(String key){
+        if(null == key){
+            return "";
+        }
+        key = key.trim();
         Object data = key;
         if(BasicUtil.checkEl(key)){
             //${users}
@@ -133,6 +141,16 @@ public class Context {
                             if(data instanceof Collection && "size".equals(k)){
                                 data = ((Collection)data).size();
                             }else {
+                                if(data instanceof String){
+                                    String str = (String)data;
+                                    if(str.startsWith("{") && str.endsWith("}")){
+                                        try{
+                                            data = DataRow.parseJson(KeyAdapter.KEY_CASE.SRC, str);
+                                        }catch (Exception e){
+                                            e.printStackTrace();
+                                        }
+                                    }
+                                }
                                 data = BeanUtil.getFieldValue(data, k);
                             }
                         }
@@ -196,11 +214,16 @@ public class Context {
         }
         //检测复合占位符
         try {
-            List<String> ks = RegularUtil.fetch(text, "\\$\\{.*?\\}");
+            List<String> ks = RegularUtil.fetch(result, "\\$\\{.*?\\}");
             for(String k:ks){
                 Object value = data(k);
                 if(null == value){
                     value = "";
+                }
+                if(BasicUtil.isEmpty(value)){
+                    if(k.startsWith("${__")){
+                        continue;
+                    }
                 }
                 result = result.replace(k, value.toString());
             }
@@ -208,6 +231,9 @@ public class Context {
             e.printStackTrace();
         }
         if(null == result){
+            if(text.startsWith("__")){
+                return text;
+            }
             result = "";
         }
         return result;
