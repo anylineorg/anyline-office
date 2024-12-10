@@ -554,7 +554,7 @@ public class DocxUtil {
                     instance.ref(ref_text);
                     //把 aol标签解析成html标签 下一步会解析html标签
                     html = instance.parse(tag);
-                    instance.release();
+                    //instance.release();
                 }
             }
             //txt = txt.replace(tag, html);
