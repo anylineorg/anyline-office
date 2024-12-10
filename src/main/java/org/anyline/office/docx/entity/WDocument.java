@@ -26,8 +26,8 @@ import org.anyline.handler.Downloader;
 import org.anyline.handler.Uploader;
 import org.anyline.log.Log;
 import org.anyline.log.LogProxy;
-import org.anyline.office.docx.tag.*;
 import org.anyline.office.docx.tag.Set;
+import org.anyline.office.docx.tag.*;
 import org.anyline.office.docx.util.DocxUtil;
 import org.anyline.util.*;
 import org.anyline.util.regular.RegularUtil;
@@ -70,7 +70,7 @@ public class WDocument extends WElement {
     private Downloader downloader;
     private int listNum = 0;
 
-    private Map<String, Tag> tags = new HashMap<>();
+    private Map<String, Class> tags = new HashMap<>();
     private Map<String, String> predefines = new HashMap<>();
 
     public WDocument(File file){
@@ -117,22 +117,23 @@ public class WDocument extends WElement {
                     charts.put(name, DocumentHelper.parseText(ZipUtil.read(file, item, charset)));
                 }
             }
-            tags.put("agg", new Agg());
-            tags.put("avg", new Avg());
-            tags.put("checkbox", new CheckBox());
-            tags.put("concat", new Concat());
-            tags.put("date", new DateFormat());
-            tags.put("for", new For());
-            tags.put("group", new Group());
-            tags.put("if", new If());
-            tags.put("img", new Img());
-            tags.put("max", new Max());
-            tags.put("min", new Min());
-            tags.put("money", new MoneyFormat());
-            tags.put("number", new NumberFormat());
-            tags.put("select", new Select());
-            tags.put("set", new Set());
-            tags.put("sum", new Sum());
+            tags.put("agg", Agg.class);
+            tags.put("avg", Avg.class);
+            tags.put("checkbox", CheckBox.class);
+            tags.put("concat", Concat.class);
+            tags.put("date", DateFormat.class);
+            tags.put("for", For.class);
+            tags.put("group", Group.class);
+            tags.put("if", If.class);
+            tags.put("img", Img.class);
+            tags.put("max", Max.class);
+            tags.put("min", Min.class);
+            tags.put("money", MoneyFormat.class);
+            tags.put("number", NumberFormat.class);
+            tags.put("select", Select.class);
+            tags.put("set", Set.class);
+            tags.put("sum", Sum.class);
+
         }catch (Exception e){
             e.printStackTrace();
         }
@@ -141,7 +142,16 @@ public class WDocument extends WElement {
         if(null == name){
             return null;
         }
-        return tags.get(name.toLowerCase());
+        Tag instance = null;
+        Class clazz = tags.get(name.toLowerCase());
+        if(null != clazz){
+            try {
+                instance = (Tag) clazz.newInstance();
+            }catch (Exception e){
+                e.printStackTrace();
+            }
+        }
+        return instance;
     }
 
     /**
@@ -880,7 +890,29 @@ public class WDocument extends WElement {
         }
         return tables;
     }
-
+    public List<WTable> tables(boolean recursion, Element box){
+        if(!recursion){
+            return tables(box);
+        }
+        List<WTable> tables = new ArrayList<>();
+        List<Element> elements = children(box);
+        for(Element element:elements){
+            if(element.getName().equals("tbl")){
+                WTable table = new WTable(this, element);
+                tables.add(table);
+            }
+        }
+        return tables;
+    }
+    public List<WTable> tables(Element box){
+        List<WTable> tables = new ArrayList<>();
+        List<Element> elements = box.elements("tbl");
+        for(Element element:elements){
+            WTable table = new WTable(this, element);
+            tables.add(table);
+        }
+        return tables;
+    }
     /**
      * 获取body下的table<br/>
      * @param content 根据内容定位
