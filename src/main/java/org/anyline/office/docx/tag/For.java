@@ -76,7 +76,7 @@ public class For extends AbstractTag implements Tag {
         */
         StringBuilder html = new StringBuilder();
         //提取最外层标签属性 避免取到下一层属性
-        String head = RegularUtil.cut(text, RegularUtil.TAG_BEGIN, ">");
+        String head = RegularUtil.fetchTagHead(text);
         String items_key = fetchAttributeValue(head, "items", "is");
         if(null == items_key){
             items_key = fetchAttributeValue(head, "data", "d");
@@ -91,7 +91,11 @@ public class For extends AbstractTag implements Tag {
         int tr_index = -1; //模板行下标
         int tc_index = -1; //模板列下标
         List<Element> tcs = new ArrayList<>();
+        List<WTc> wtcs = new ArrayList<>();
         List<Element> trs = new ArrayList<>();
+        List<WTr> wtrs = new ArrayList<>();
+        Element table = null;
+        WTable wtable = null;
         if("tc".equalsIgnoreCase(scope) || "td".equalsIgnoreCase(scope)){
             type = 1;
             for(Element wt: wts){
@@ -114,9 +118,16 @@ public class For extends AbstractTag implements Tag {
                     }
                 }
             }
+        }else if("table".equalsIgnoreCase(scope)){
+            type = 3;
+            for(Element wt: wts){
+                table = DocxUtil.getParent(wt, "tbl");
+                if(null != table){
+                    break;
+                }
+            }
         }
         boolean reload_table = false; //重新加载table(之前没有加载过会导致wtc获取不到)
-        List<WTc> wtcs = new ArrayList<>();
         for(Element tc: tcs){
             WTc wtc = WTc.tc(tc);
             if(null == wtc && !reload_table){
@@ -128,7 +139,6 @@ public class For extends AbstractTag implements Tag {
                 wtcs.add(wtc);
             }
         }
-        List<WTr> wtrs = new ArrayList<>();
         for(Element tr: trs){
             WTr wtr = WTr.tr(tr);
             if(null == wtr && !reload_table){
@@ -140,11 +150,19 @@ public class For extends AbstractTag implements Tag {
                 wtrs.add(wtr);
             }
         }
+        if(null != table){
+            wtable = WTable.table(table);
+            if(null == wtable && !reload_table){
+                doc.tables();
+                reload_table = true;
+                wtable = WTable.table(table);
+            }
+        }
         var = fetchAttributeValue(head, "var");
         status = fetchAttributeValue(head, "status", "s");
         begin = BasicUtil.parseInt(fetchAttributeValue(head, "begin", "b"), 0);
         end = BasicUtil.parseInt(fetchAttributeValue(head, "end", "e"), null);
-
+        WTable prevTable = wtable;
         if(null != items) {//遍历集合
             if(items instanceof String){
                 String str = (String) items;
@@ -180,6 +198,8 @@ public class For extends AbstractTag implements Tag {
                         } else if(type == 2){
                             //遍历tr
                             tr(tr_index+index*wtrs.size(), wtrs, item_context);
+                        } else if(type == 3){
+                            prevTable = table(prevTable, wtable, item_context);
                         } else if(null != body) {
                             //遍历文本
                             text(html, body, item_context);
@@ -210,6 +230,8 @@ public class For extends AbstractTag implements Tag {
                     } else if(type == 2){
                         //遍历tr
                         tr(tr_index++, wtrs, item_context);
+                    } else if(type == 3){
+                        prevTable = table(prevTable, wtable, item_context);
                     } else if(null != body) {
                         //遍历文本
                         text(html, body, item_context);
@@ -292,5 +314,10 @@ public class For extends AbstractTag implements Tag {
             }
             r ++;
         }
+    }
+    private WTable table(WTable prev, WTable template, Context context) throws Exception{
+        WTable insert = template.clone(true);
+        DocxUtil.after(insert.getSrc(), prev.getSrc());
+        return insert;
     }
 }
