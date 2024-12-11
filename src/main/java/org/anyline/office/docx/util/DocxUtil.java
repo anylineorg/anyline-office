@@ -379,8 +379,10 @@ public class DocxUtil {
             //ref取父标签后可能与src一样
             return;
         }
+        Element rp = ref.getParent();
+        Element sp = src.getParent();
         // 同级
-        if(ref.getParent() == src.getParent()){
+        if(rp == sp || null == sp){
             List<Element> elements = ref.getParent().elements();
             int index = elements.indexOf(ref)+1;
             elements.remove(src);
@@ -389,7 +391,7 @@ public class DocxUtil {
             }else {
                 elements.add(index, src);
             }
-        }else{
+        } else {
             // ref更下级
             after(src, ref.getParent());
         }
@@ -485,6 +487,9 @@ public class DocxUtil {
             name = RegularUtil.cut(text, prefix, "/");
         }
         return name;
+    }
+    public static void parseTag(WDocument doc, Element box, Context context){
+
     }
     public static String parseTag(WDocument doc, List<Element> ts, String txt, Context context) throws Exception{
         if(null == txt){
