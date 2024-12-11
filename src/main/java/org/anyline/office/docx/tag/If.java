@@ -33,8 +33,7 @@ public class If extends AbstractTag implements Tag {
     }
     public String parse(String text) throws Exception{
         String html = "";
-
-        String head = RegularUtil.cut(text, RegularUtil.TAG_BEGIN, ">");
+        String head = RegularUtil.fetchTagHead(text);
         String test = fetchAttributeValue(head, "test", "t");
         String value = fetchAttributeValue(head, "value", "v");
         String var = fetchAttributeValue(head, "var");
