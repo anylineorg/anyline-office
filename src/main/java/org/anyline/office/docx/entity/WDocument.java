@@ -389,6 +389,7 @@ public class WDocument extends WElement {
             if(BasicUtil.isEmpty(cur.trim())){
                 continue;
             }
+            full = full.replace("\"", "'");
             String name = null;
             if(full.length() > 5){
                 if(!full.trim().startsWith("<aol:")){
@@ -411,6 +412,13 @@ public class WDocument extends WElement {
                     if (!chk_s.contains(">")) {
                         //单标签结束
                         break;
+                    }else{
+                        //<aol:if test='${total>10}' var='if1'/>
+                        //或者>在引号内
+                        chk_s = chk_s.substring(0, chk_s.lastIndexOf(">"));
+                        if(BasicUtil.charCount(chk_s, "'")%2==1){
+                            break;
+                        }
                     }
                 }
                 if(end_d != -1){
@@ -438,7 +446,99 @@ public class WDocument extends WElement {
         List<String> placeholders = new ArrayList<>();
         placeholders.addAll(context.replaces().keySet());
         mergePlaceholder(placeholders);
+        List<Element> ps = DomUtil.elements(src,"p");
+        for(Element p:ps){
+            mergePlaceholder(p);
+        }
     }
+    public void mergePlaceholder(Element box){
+        List<Element> ts = DomUtil.elements(box, "t");
+        int size = ts.size();
+        String full = "";
+        List<Element> merges = new ArrayList<>();
+        for(int i=0; i<size-1; i++){
+            Element t = ts.get(i);
+            String txt = t.getText();
+            full += txt;
+            merges.add(t);
+            //a${b, c,}
+            //a$, {, b, c, }
+
+            if(!full.contains("$")){
+                //没有占位符 重新计数
+                full = "";
+                merges.clear();
+                continue;
+            }
+            if(full.endsWith("$")){
+                continue;
+            }
+            String after_char = after(true, full, "$");
+            if(!"{".equals(after_char)){
+                merges.clear();
+                full = "";
+                continue;
+            }
+            //占位符开始位置
+            int head_qty = BasicUtil.charCount(full, "$");
+            int start_qty = BasicUtil.charCount(full, "{");
+            int end_qty = BasicUtil.charCount(full, "}");
+            if(head_qty == start_qty && head_qty == end_qty){
+                //完整 占位符
+                //开始合并
+                full = "";
+                mergeText(merges);
+            }
+        }
+    }
+    public void mergeText(List<Element> ts){
+        int size = ts.size();
+        if(size > 1){
+            String text = DocxUtil.text(ts);
+            Element first = ts.get(0);
+            System.out.println("\nmerge:"+text);
+            System.out.println("first:"+first.getText());
+            first.setText(text);
+            /*for(int i=size-1; i>=1; i--){
+                Element t = ts.get(i);
+                System.out.println("remove:"+t.getText());
+                t.getParent().remove(t);
+            }*/
+            for(int i=1; i<size; i++){
+                Element t = ts.get(i);
+                System.out.println("remove:"+t.getText());
+                t.getParent().remove(t);
+            }
+        }
+    }
+
+    /**
+     * flag后一个字符
+     * @param empty 是否包含空
+     * @param text 全文
+     * @param flag 开始位置
+     * @return char
+     */
+    public static String after(boolean empty, String text, String flag){
+        String after = null;
+        int idx = text.lastIndexOf(flag);
+        if(idx != -1){
+            int length = text.length();
+            while (true) {
+                if (idx + flag.length() < length) {
+                    after = text.substring(idx + flag.length(), idx + flag.length() + 1);
+                    if(!" ".equalsIgnoreCase(after) || empty){
+                        break;
+                    }
+                }else {
+                    break;
+                }
+                idx ++;
+            }
+        }
+        return after;
+    }
+
     /**
      * 合并占位符 ${key} 拆分到3个t中的情况
      * @param placeholders 占位符列表 带不还${}都可以 最终会处理掉${}
@@ -584,8 +684,11 @@ public class WDocument extends WElement {
         List<Element> ts = DomUtil.elements(box, "t");
         for(Element t:ts){
             String txt = t.getTextTrim();
+            if(BasicUtil.isEmpty(txt)){
+                continue;
+            }
             List<String> flags = DocxUtil.splitKey(txt);
-            if(flags.size() == 0){
+            if(flags.isEmpty()){
                 continue;
             }
             Collections.reverse(flags);
