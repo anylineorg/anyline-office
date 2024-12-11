@@ -28,7 +28,7 @@ public class Max extends AbstractTag implements Tag{
     }
     public String parse(String text) throws Exception{
         String html = "";
-        String head = RegularUtil.cut(text, RegularUtil.TAG_BEGIN, ">");
+        String head = RegularUtil.fetchTagHead(text);
         String items_key = fetchAttributeValue(head, "items", "data", "d", "is");
         String property = fetchAttributeValue(head, "property", "p");
         String var = fetchAttributeValue(head, "var", "v");
