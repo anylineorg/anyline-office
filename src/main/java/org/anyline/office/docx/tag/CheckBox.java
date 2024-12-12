@@ -115,6 +115,9 @@ public class CheckBox extends AbstractTag implements Tag {
                 String items[] = data.toString().split(",");
                 List list = new ArrayList();
                 for (String item : items) {
+                    if(BasicUtil.isEmpty(item)){
+                        continue;
+                    }
                     Map map = new HashMap();
                     String ks[] = BeanUtil.parseKeyValue(item);
                     map.put(valueKey, ks[0]);
@@ -141,6 +144,9 @@ public class CheckBox extends AbstractTag implements Tag {
                     }
                     this.value = list;
                 }
+            }
+            if(!(data instanceof Collection)){
+                return "";
             }
             Collection<Map> items = (Collection<Map>) data;
             Collection chks = null;
