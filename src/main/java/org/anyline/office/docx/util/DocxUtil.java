@@ -881,6 +881,171 @@ public class DocxUtil {
         return start;
     }
 
+    /**
+     * 合并占位符 包含ognl
+     * @param box 通常是一个p标签
+     */
+    public static void mergePlaceholder(Element box){
+        List<Element> items = DomUtil.elements(box, "t,br,bookmarkStart");
+        //<w:bookmarkStart w:id="0" w:name="a"/>
+        int size = items.size();
+        String full = "";
+        List<Element> merges = new ArrayList<>();
+        for(int i=0; i<size; i++){
+            Element item = items.get(i);
+            String name = item.getName();
+            if(name.equals("br") || name.equals("bookmarkStart")){
+                merges.clear();
+                continue;
+            }
+            String txt = item.getText();
+            full += txt;
+            merges.add(item);
+            //a${b, c,}
+            //a$, {, b, c, }
+
+            if(!full.contains("$")){
+                //没有占位符 重新计数
+                full = "";
+                merges.clear();
+                continue;
+            }
+            if(full.endsWith("$")){
+                continue;
+            }
+            String after_char = after(true, full, "$");
+            if(!"{".equals(after_char)){
+                merges.clear();
+                full = "";
+                continue;
+            }
+            //占位符开始位置
+            int head_qty = BasicUtil.charCount(full, "$");
+            int start_qty = BasicUtil.charCount(full, "{");
+            int end_qty = BasicUtil.charCount(full, "}");
+            if(head_qty == start_qty && head_qty == end_qty){
+                //完整 占位符
+                //开始合并
+                full = "";
+                mergeText(merges);
+                i+= merges.size()-1;
+                merges.clear();
+            }
+        }
+    }
+
+    /**
+     * 合并拆分到多个个t中标签，不限相同段落(p)<br/>
+     * @param box 通常是body, p, table, tr, tc
+     */
+    public static void mergeTag(Element box){
+        //全部t标签
+        List<Element> ts = DomUtil.elements(box, "t");
+        int size = ts.size();
+        List<Element> items = new ArrayList<>();
+        String full = "";
+        for(int i = 0; i < size; i++){
+            Element t = ts.get(i);
+            full += t.getText();
+            if(full.contains("<")){
+                items.add(t);
+                if(checkTagClose(full)){
+                    //这里不需要是一个完整标签，是完整开头或完整结尾都可以
+                    DocxUtil.mergeText(items);
+                    i += items.size() - 1;
+                    full = "";
+                    items.clear();
+                }
+            }else{
+                full = "";
+                items.clear();
+            }
+        }
+    }
+
+    /**
+     * 检测是否是开始或完整标签，主要检测有没有结尾&gt;
+     * 如果没有标签 返回true
+     * @param txt tag
+     * @return boolean
+     */
+    public static boolean checkTagClose(String txt){
+        String chk = txt.replace("\"", "'")
+            .replace("”", "'")
+            .replace("‘", "'");
+        chk = chk.replaceAll("'.*?'", "''");
+        //<aol:if></aol:if> <aol:number/>
+        if(!chk.contains("<aol:") && !chk.contains("</aol:")){
+            return true;
+        }
+        int idx = chk.lastIndexOf("<aol:");
+        if(idx == -1){
+            idx = chk.lastIndexOf("</aol:");
+        }
+        if(idx != -1){
+            //aol:后部分
+            chk = chk.substring(idx+5);
+
+            //if test=”${xx> 100 && xx <10}
+            //>不在引号内
+            idx = chk.indexOf(">");
+            if(idx != -1){
+                chk = chk.substring(0, idx);
+                if(BasicUtil.charCount(chk, "'")%2 == 0){
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    public static void mergeText(List<Element> ts){
+        int size = ts.size();
+        if(size > 1){
+            String text = DocxUtil.text(ts);
+            Element first = ts.get(0);
+            first.setText(text);
+            for(int i=1; i<size; i++){
+                Element t = ts.get(i);
+                Element r = t.getParent();
+                if(null != r) {
+                    r.remove(t);
+                    if(r.elements("t").isEmpty()){
+                        r.getParent().remove(r);
+                    }
+                }else{
+                    log.error("重复删除:{}", t.getText());
+                }
+            }
+        }
+    }
+
+    /**
+     * flag后一个字符
+     * @param empty 是否包含空
+     * @param text 全文
+     * @param flag 开始位置
+     * @return char
+     */
+    public static String after(boolean empty, String text, String flag){
+        String after = null;
+        int idx = text.lastIndexOf(flag);
+        if(idx != -1){
+            int length = text.length();
+            while (true) {
+                if (idx + flag.length() < length) {
+                    after = text.substring(idx + flag.length(), idx + flag.length() + 1);
+                    if(!" ".equalsIgnoreCase(after) || empty){
+                        break;
+                    }
+                }else {
+                    break;
+                }
+                idx ++;
+            }
+        }
+        return after;
+    }
 
     public static Element pr(Element element, String styles){
         return pr(element, StyleParser.parse(styles));
