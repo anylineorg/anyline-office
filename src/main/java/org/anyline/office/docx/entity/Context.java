@@ -117,8 +117,57 @@ public class Context {
         key = key.trim();
         Object data = key;
         if(BasicUtil.checkEl(key)){
+            /**
+             * 当前时间 ${ao:now}
+             * 随机8位字符${ao:random:8} ${ao:string:8}
+             * 随机8位数字${ao:number:8}
+             * 随机10-100数字${ao:number:10:100}
+             * UUID  ${ao:uuid}
+             */
             //${users}
             key = key.substring(2, key.length() - 1);
+            if(key.startsWith("ao:")){
+                //内置常量
+                String[] tmps = key.split(":");
+                if(tmps.length > 1){
+                    String var = tmps[1];
+                    //当前时间
+                    //ao:now
+                    if(var.equalsIgnoreCase("now")){
+                        return new Date();
+                    }
+                    //随机字符
+                    if(var.equalsIgnoreCase("random") || var.equalsIgnoreCase("string")){
+                        int len = 8;
+                        if(tmps.length> 2){
+                            //随机8位
+                            //ao:random:8(默认8位)
+                            len = BasicUtil.parseInt(tmps[2], len);
+                        }
+                        return BasicUtil.getRandomString(len);
+                    }
+                    //随机数字
+                    if(var.equalsIgnoreCase("number")){
+                        if(tmps.length> 3){
+                            //随机8位
+                            //ao:number:0:100
+                            int min = BasicUtil.parseInt(tmps[2], 0);
+                            int max = BasicUtil.parseInt(tmps[3], 0);
+                            return BasicUtil.getRandomNumber(min, max);
+                        }
+                        int len = 8;
+                        if(tmps.length> 2){
+                            //随机8位
+                            //ao:number:8(默认8位)
+                            len = BasicUtil.parseInt(tmps[2], len);
+                        }
+                        return BasicUtil.getRandomNumberString(len);
+                    }
+                    if(var.equalsIgnoreCase("uuid")){
+                        return UUID.randomUUID().toString();
+                    }
+                }
+            }
             data = variables.get(key);
             if(null == data){
                 data = htmls.get(key);
@@ -138,8 +187,23 @@ public class Context {
                             if(null == data){
                                 break;
                             }
-                            if(data instanceof Collection && "size".equals(k)){
-                                data = ((Collection)data).size();
+
+                            if(data instanceof Collection){
+                                Collection cols = ((Collection)data);
+                                if("size".equals(k)){
+                                    data = cols.size();
+                                }else if("empty".equals(k)){
+                                    data = cols.isEmpty();
+                                }
+                            } else if(data instanceof Map){
+                                Map map = ((Map)data);
+                                if("size".equals(k)){
+                                    data = map.size();
+                                }else if("empty".equals(k)){
+                                    data = map.isEmpty();
+                                }else{
+                                    data = map.get(k);
+                                }
                             }else {
                                 if(data instanceof String){
                                     String str = (String)data;
