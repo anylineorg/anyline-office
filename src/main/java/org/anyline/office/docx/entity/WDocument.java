@@ -99,8 +99,8 @@ public class WDocument extends WElement {
     }
     public void reload(){
         try {
-            xml = ZipUtil.read(file, "word/document.xml", charset);
-            relsXml = ZipUtil.read(file, "word/_rels/document.xml.rels", charset);
+            xml = ZipUtil.read(file, "word/document.xml", charset).trim();
+            relsXml = ZipUtil.read(file, "word/_rels/document.xml.rels", charset).trim();
             doc = DocumentHelper.parseText(xml);
             rels = DocumentHelper.parseText(relsXml);
             src = doc.getRootElement().element("body");
@@ -271,6 +271,35 @@ public class WDocument extends WElement {
         }
     }
 
+    public void format(){
+        format(Charset.forName("UTF-8"));
+    }
+    public void format(Charset charset){
+        try {
+            //加载文件
+            load();
+            //执行替换
+            Map<String, String> zip_replaces = new HashMap<>();
+            for(String name:footers.keySet()){
+                Document doc = footers.get(name);
+                zip_replaces.put("word/" + name + ".xml", DomUtil.format(doc));
+            }
+            for(String name:headers.keySet()){
+                Document doc = headers.get(name);
+                zip_replaces.put("word/" + name + ".xml", DomUtil.format(doc));
+            }
+            for(String name:charts.keySet()){
+                Document doc = charts.get(name);
+                zip_replaces.put("word/charts/" + name + ".xml",  DomUtil.format(doc));
+            }
+            zip_replaces.put("word/document.xml", DomUtil.format(doc));
+            zip_replaces.put("word/_rels/document.xml.rels", DomUtil.format(rels));
+            ZipUtil.replace(file, zip_replaces, charset);
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+    }
+
     /**
      * 替换占位符前 先解析标签
      */
@@ -287,7 +316,7 @@ public class WDocument extends WElement {
             if(txt.contains("<")){
                 List<Element> items = new ArrayList<>();
                 items.add(t);
-                if(!isFullTag(txt)){//如果不是完整标签 继续拼接下一个直到完成或失败
+                if(!RegularUtil.isFullTag(txt)){//如果不是完整标签 继续拼接下一个直到完成或失败
                     items = tag(txt, ts, i+1);
                     if(!items.isEmpty()) {
                         items.add(0, t);
@@ -333,7 +362,7 @@ public class WDocument extends WElement {
             if(txt.contains("<")){
                 List<Element> items = new ArrayList<>();
                 items.add(t);
-                if(!isFullTag(txt)){//如果不是完整标签 继续拼接下一个直到完成或失败
+                if(!RegularUtil.isFullTag(txt)){//如果不是完整标签 继续拼接下一个直到完成或失败
                     items = tag(txt, ts, i+1);
                     if(!items.isEmpty()) {
                         items.add(0, t);
@@ -433,208 +462,49 @@ public class WDocument extends WElement {
         }
         return list;
     }
-    private boolean isFullTag(String txt){
-        List<String> tags = RegularUtil.fetchOutTag(txt);
-        return !tags.isEmpty();
-    }
 
-    /**
-     * 合并占位符 ${key} 拆分到3个t中的情况
-     * 调用完replace后再调用当前方法，因为需要用到replace里提供的占位符列表
-     */
     public void mergePlaceholder(){
-        List<String> placeholders = new ArrayList<>();
-        placeholders.addAll(context.replaces().keySet());
-        mergePlaceholder(placeholders);
-        List<Element> ps = DomUtil.elements(src,"p");
-        for(Element p:ps){
-            mergePlaceholder(p);
-        }
+        mergePlaceholder(src);
     }
-    public void mergePlaceholder(Element box){
-        List<Element> ts = DomUtil.elements(box, "t");
-        int size = ts.size();
-        String full = "";
-        List<Element> merges = new ArrayList<>();
-        for(int i=0; i<size-1; i++){
-            Element t = ts.get(i);
-            String txt = t.getText();
-            full += txt;
-            merges.add(t);
-            //a${b, c,}
-            //a$, {, b, c, }
-
-            if(!full.contains("$")){
-                //没有占位符 重新计数
-                full = "";
-                merges.clear();
-                continue;
-            }
-            if(full.endsWith("$")){
-                continue;
-            }
-            String after_char = after(true, full, "$");
-            if(!"{".equals(after_char)){
-                merges.clear();
-                full = "";
-                continue;
-            }
-            //占位符开始位置
-            int head_qty = BasicUtil.charCount(full, "$");
-            int start_qty = BasicUtil.charCount(full, "{");
-            int end_qty = BasicUtil.charCount(full, "}");
-            if(head_qty == start_qty && head_qty == end_qty){
-                //完整 占位符
-                //开始合并
-                full = "";
-                mergeText(merges);
+    /**
+     * 合并同一个段落中占位符 ${key} 拆分到多个个t中的情况<br/>
+     * 注意只有换行、回车、书签可以破坏占位符
+     * @param box 通常是body, p; table, tr, tc通常不需要 因为其中内容都包含在pk
+     */
+    public void mergePlaceholder(Element box) {
+        if (null == box) {
+            return;
+        }
+        if (box.getName().equals("p")) {
+            DocxUtil.mergePlaceholder(box);
+        } else {
+            List<Element> ps = DomUtil.elements(box, "p");
+            for (Element p : ps) {
+                DocxUtil.mergePlaceholder(p);
             }
         }
     }
-    public void mergeText(List<Element> ts){
-        int size = ts.size();
-        if(size > 1){
-            String text = DocxUtil.text(ts);
-            Element first = ts.get(0);
-            System.out.println("\nmerge:"+text);
-            System.out.println("first:"+first.getText());
-            first.setText(text);
-            /*for(int i=size-1; i>=1; i--){
-                Element t = ts.get(i);
-                System.out.println("remove:"+t.getText());
-                t.getParent().remove(t);
-            }*/
-            for(int i=1; i<size; i++){
-                Element t = ts.get(i);
-                System.out.println("remove:"+t.getText());
-                t.getParent().remove(t);
-            }
-        }
+    public void mergeTag(){
+        mergeTag(src);
     }
 
     /**
-     * flag后一个字符
-     * @param empty 是否包含空
-     * @param text 全文
-     * @param flag 开始位置
-     * @return char
+     * 合并标签 开始 结束标签分别合并
+     * @param box 通常是body, p; table, tr, tc通常不需要 因为其中内容都包含在pk
      */
-    public static String after(boolean empty, String text, String flag){
-        String after = null;
-        int idx = text.lastIndexOf(flag);
-        if(idx != -1){
-            int length = text.length();
-            while (true) {
-                if (idx + flag.length() < length) {
-                    after = text.substring(idx + flag.length(), idx + flag.length() + 1);
-                    if(!" ".equalsIgnoreCase(after) || empty){
-                        break;
-                    }
-                }else {
-                    break;
-                }
-                idx ++;
+    public void mergeTag(Element box) {
+        if (null == box) {
+            return;
+        }
+        if (box.getName().equals("p")) {
+            DocxUtil.mergeTag(box);
+        } else {
+            List<Element> ps = DomUtil.elements(box, "p");
+            for (Element p : ps) {
+                DocxUtil.mergeTag(p);
             }
         }
-        return after;
     }
-
-    /**
-     * 合并占位符 ${key} 拆分到3个t中的情况
-     * @param placeholders 占位符列表 带不还${}都可以 最终会处理掉${}
-     */
-    public void mergePlaceholder(List<String> placeholders){
-        mergePlaceholder(getSrc(), placeholders);
-        for(Document footer:footers.values()){
-            mergePlaceholder(footer.getRootElement(), placeholders);
-        }
-        for(Document header:headers.values()){
-            mergePlaceholder(header.getRootElement(), placeholders);
-        }
-        for(Document chart:charts.values()){
-            mergePlaceholder(chart.getRootElement(), placeholders);
-        }
-    }
-    public void mergePlaceholder(Element box, List<String> placeholders){
-        List<String> list = new ArrayList<>();
-        for(String placeholder:placeholders){
-            list.add(placeholder.replace("${", "").replace("}", ""));
-        }
-        List<Element> ts = DomUtil.elements(box, "t");
-        List<Element> removes = new ArrayList<>();
-        int size = ts.size();
-        for(int i=0; i<size;){
-            Element t = ts.get(i);
-            String txt = t.getTextTrim();
-            if("${".equals(txt)){
-                Element next =getElement(ts, i+1, list);
-                if(null != next){
-                    Element end = getElement(ts, i+2, "}");
-                    if(null != end){
-                        txt = "${" + next.getTextTrim().trim() + "}";
-                        t.setText(txt);
-                        for(int idx = i+1; idx <= ts.indexOf(end); idx++){
-                            removes.add(ts.get(idx));
-                        }
-                    }
-                }
-            }
-            i ++;
-        }
-        for(Element remove:removes){
-            remove.getParent().remove(remove);
-        }
-    }
-    //合并被拆到多个t中的标签体
-    public void mergeTag(Element box){
-        List<String> list = new ArrayList<>();
-        List<Element> ts = DomUtil.elements(box, "t");
-        List<Element> removes = new ArrayList<>();
-        int size = ts.size();
-        for(int i=0; i<size; i++){
-            Element t = ts.get(i);
-            String txt = t.getTextTrim();
-            if(txt.startsWith("<aol:")) {
-                String name = null;
-                if(txt.contains(" ")){
-                    name = RegularUtil.cut(txt, "aol:", " ");
-                }
-                //找到结尾标签以及之前的内容
-                List<Element> next = nextByEnd(ts, i+1, name);
-            }
-        }
-        for(Element remove:removes){
-            remove.getParent().remove(remove);
-        }
-    }
-
-    /**
-     *
-     * @param elements
-     * @param start
-     * @param tag
-     * @return
-     */
-    public List<Element> nextByEnd(List<Element> elements, int start, String tag){
-        String end = "</aol:"+tag+">";
-        List<Element> next = new ArrayList<>();
-        int size = elements.size();
-        boolean chk = false; //是否出现结束标签标识 </
-        boolean finish = false; //是否完成结束标签查找
-        for(int i=start; i<size; i++){
-            Element element = elements.get(i);
-            next.add(element);
-            String txt = element.getTextTrim();
-            if(txt.contains("/")){
-                chk = true;
-            }
-            if(chk && txt.contains(">")){
-                break;
-            }
-        }
-        return next;
-    }
-
     /**
      * 保住指定内容的element
      * @param elements elements
@@ -1207,8 +1077,8 @@ public class WDocument extends WElement {
                 list.add(elements.get(index+i+1));
             }
         }catch (Exception e){
+            log.error("xml格式异常:{}",html);
             e.printStackTrace();
-            // log.error(html);
         }
         return list;
     }
