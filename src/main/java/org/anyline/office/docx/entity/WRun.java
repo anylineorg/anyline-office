@@ -50,8 +50,8 @@ public class WRun extends WElement {
      * @return Wr
      */
     public WRun setColor(String color){
-        Element pr = DocxUtil.addElement(src, "rPr");
-        DocxUtil.addElement(pr, "color","val", color.replace("#",""));
+        Element pr = DocxUtil.element(src, "rPr");
+        DocxUtil.element(pr, "color","val", color.replace("#",""));
         return this;
     }
 
@@ -65,11 +65,11 @@ public class WRun extends WElement {
      */
     public WRun setFont(String size, String eastAsia, String ascii, String hint){
         int pt = DocxUtil.fontSize(size);
-        Element pr = DocxUtil.addElement(src, "rPr");
-        DocxUtil.addElement(pr, "sz","val", pt+"");
-        DocxUtil.addElement(pr, "rFonts","eastAsia", eastAsia);
-        DocxUtil.addElement(pr, "rFonts","ascii", ascii);
-        DocxUtil.addElement(pr, "rFonts","hint", hint);
+        Element pr = DocxUtil.element(src, "rPr");
+        DocxUtil.element(pr, "sz","val", pt+"");
+        DocxUtil.element(pr, "rFonts","eastAsia", eastAsia);
+        DocxUtil.element(pr, "rFonts","ascii", ascii);
+        DocxUtil.element(pr, "rFonts","hint", hint);
 
         return this;
     }
@@ -81,8 +81,8 @@ public class WRun extends WElement {
      */
     public WRun setFontSize(String size){
         int pt = DocxUtil.fontSize(size);
-        Element pr = DocxUtil.addElement(src, "rPr");
-        DocxUtil.addElement(pr, "sz","val", pt+"");
+        Element pr = DocxUtil.element(src, "rPr");
+        DocxUtil.element(pr, "sz","val", pt+"");
         return this;
     }
 
@@ -92,12 +92,12 @@ public class WRun extends WElement {
      * @return Wr
      */
     public WRun setFontFamily(String font){
-        Element pr = DocxUtil.addElement(src, "rPr");
-        DocxUtil.addElement(pr, "rFonts","eastAsia", font);
-        DocxUtil.addElement(pr, "rFonts","ascii", font);
-        DocxUtil.addElement(pr, "rFonts","hAnsi", font);
-        DocxUtil.addElement(pr, "rFonts","cs", font);
-        DocxUtil.addElement(pr, "rFonts","hint", font);
+        Element pr = DocxUtil.element(src, "rPr");
+        DocxUtil.element(pr, "rFonts","eastAsia", font);
+        DocxUtil.element(pr, "rFonts","ascii", font);
+        DocxUtil.element(pr, "rFonts","hAnsi", font);
+        DocxUtil.element(pr, "rFonts","cs", font);
+        DocxUtil.element(pr, "rFonts","hint", font);
         return this;
     }
 
@@ -107,8 +107,8 @@ public class WRun extends WElement {
      * @return Wr
      */
     public WRun setBackgroundColor(String color){
-        Element pr = DocxUtil.addElement(src, "rPr");
-        DocxUtil.addElement(pr, "highlight", "val", color.replace("#",""));
+        Element pr = DocxUtil.element(src, "rPr");
+        DocxUtil.element(pr, "highlight", "val", color.replace("#",""));
         return this;
     }
 
@@ -118,7 +118,7 @@ public class WRun extends WElement {
      * @return Wr
      */
     public WRun setBold(boolean bold){
-        Element pr = DocxUtil.addElement(src, "rPr");
+        Element pr = DocxUtil.element(src, "rPr");
         Element b = pr.element("b");
         if(bold){
             if(null == b){
@@ -138,11 +138,11 @@ public class WRun extends WElement {
      * @return Wr
      */
     public WRun setUnderline(boolean underline){
-        Element pr = DocxUtil.addElement(src, "rPr");
+        Element pr = DocxUtil.element(src, "rPr");
         Element u = pr.element("u");
         if(underline){
             if(null == u){
-                DocxUtil.addElement(pr, "u", "val", "single");
+                DocxUtil.element(pr, "u", "val", "single");
             }
         }else{
             if(null != u){
@@ -158,7 +158,7 @@ public class WRun extends WElement {
      * @return Wr
      */
     public WRun setStrike(boolean strike){
-        Element pr = DocxUtil.addElement(src, "rPr");
+        Element pr = DocxUtil.element(src, "rPr");
         Element s = pr.element("strike");
         if(strike){
             if(null == s){
@@ -178,13 +178,13 @@ public class WRun extends WElement {
      * @return Wr
      */
     public WRun setVerticalAlign(String align){
-        Element pr = DocxUtil.addElement(src, "rPr");
-        DocxUtil.addElement(pr, "vertAlign", "val", align);
+        Element pr = DocxUtil.element(src, "rPr");
+        DocxUtil.element(pr, "vertAlign", "val", align);
         return this;
     }
     public WRun setItalic(boolean italic){
-        Element pr = DocxUtil.addElement(src, "rPr");
-        DocxUtil.addElement(pr, "i","val",italic+"");
+        Element pr = DocxUtil.element(src, "rPr");
+        DocxUtil.element(pr, "i","val",italic+"");
         return this;
     }
     /**
