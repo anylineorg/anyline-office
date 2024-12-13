@@ -39,6 +39,7 @@ import org.dom4j.Node;
 import java.io.File;
 import java.io.InputStream;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 public class WDocument extends WElement {
@@ -59,7 +60,7 @@ public class WDocument extends WElement {
 
     private LinkedHashMap<String, Map<String, String>> styles = new LinkedHashMap<>();
     private Context context = new Context();
-    private boolean autoMergePlaceholder = true;
+    private boolean autoRecombine = true;
     /**
      * word转html时遇到文件需要上传到文件服务器，并返回url
      */
@@ -70,7 +71,13 @@ public class WDocument extends WElement {
     private Downloader downloader;
     private int listNum = 0;
 
+    /**
+     * 支持的标签类型
+     */
     private Map<String, Class> tags = new HashMap<>();
+    /**
+     * 预定义标签
+     */
     private Map<String, String> predefines = new HashMap<>();
 
     public WDocument(File file){
@@ -134,9 +141,8 @@ public class WDocument extends WElement {
             tags.put("set", Set.class);
             tags.put("sum", Sum.class);
             tags.put("mark", Mark.class);
-
         }catch (Exception e){
-            e.printStackTrace();
+            log.error("加载失败", e);
         }
     }
     public Tag tag(String name){
@@ -149,7 +155,7 @@ public class WDocument extends WElement {
             try {
                 instance = (Tag) clazz.newInstance();
             }catch (Exception e){
-                e.printStackTrace();
+                log.error("tag实例化失败", e);
             }
         }
         return instance;
@@ -179,7 +185,7 @@ public class WDocument extends WElement {
         try {
             xml = DomUtil.format(doc);
         }catch (Exception e){
-            e.printStackTrace();
+            log.error("刷新异常", e);
         }
     }
     public void loadStyle(String html){
@@ -228,8 +234,8 @@ public class WDocument extends WElement {
         try {
             //加载文件
             load();
-            if(autoMergePlaceholder){
-                recombination();
+            if(autoRecombine){
+                recombine();
             }
             //解析预定义标签
             predefine();
@@ -268,9 +274,10 @@ public class WDocument extends WElement {
             txt = BasicUtil.replace(txt, context.texts());
             zip_replaces.put("word/document.xml", txt);
             zip_replaces.put("word/_rels/document.xml.rels", DomUtil.format(rels));
+
             ZipUtil.replace(file, zip_replaces, charset);
         }catch (Exception e){
-            e.printStackTrace();
+            log.error("保存失败", e);
         }
     }
 
@@ -279,33 +286,55 @@ public class WDocument extends WElement {
      * 合并拆分到多个t中的占位符(包含表达式)和aol标签
      * 拆分标签的前后缀 head body foot到单独的t中
      * 拆分不在标签内的占位符到单独的t中
+     * @param save 是否保存
      */
-    public void recombination(boolean save){
+    public void recombine(boolean save){
         load();
-        mergePlaceholder();
-        mergeTag();
-        splitPlaceholder();
+        Map<String, String> zip_replaces = new HashMap<>();
+        for(String name:footers.keySet()){
+            Document doc = footers.get(name);
+            recombine(doc.getRootElement());
+            String txt = DomUtil.format(doc);
+            zip_replaces.put("word/" + name + ".xml", txt);
+        }
+        for(String name:headers.keySet()){
+            Document doc = headers.get(name);
+            recombine(doc.getRootElement());
+            String txt = DomUtil.format(doc);
+            zip_replaces.put("word/" + name + ".xml", txt);
+        }
+        for(String name:charts.keySet()){
+            Document doc = charts.get(name);
+            recombine(doc.getRootElement());
+            String txt = DomUtil.format(doc);
+            zip_replaces.put("word/charts/" + name + ".xml", txt);
+        }
+        recombine(src);
+        String txt = DomUtil.format(doc);
+        zip_replaces.put("word/document.xml", txt);
         if(save){
             try {
-                String txt = DomUtil.format(doc);
-                Map<String, String> zip_replaces = new HashMap<>();
-                zip_replaces.put("word/document.xml", txt);
                 ZipUtil.replace(file, zip_replaces, Charset.forName(charset));
             }catch (Exception e){
-                e.printStackTrace();
+                log.error("重新组合异常", e);
             }
         }
     }
-    public void recombination(){
-        recombination(false);
+    public void recombine(){
+        recombine(false);
+    }
+    public void recombine(Element box){
+        mergePlaceholder(box);
+        mergeTag(box);
+        splitPlaceholder(box);
     }
 
     /**
      * 拆分不在标签内的占位符到单独的t中<br/>
      * 注意:要在合并之后调用，默认每个t中都是完整的占位符
      */
-    private void splitPlaceholder(){
-        List<Element> ts = DomUtil.elements(src, "t");
+    private void splitPlaceholder(Element box){
+        List<Element> ts = DomUtil.elements(box, "t");
         for(Element t:ts){
             String text = t.getText();
             List<String> list = splitPlaceholder(text);
@@ -372,7 +401,7 @@ public class WDocument extends WElement {
     }
 
     public void format(){
-        format(Charset.forName("UTF-8"));
+        format(StandardCharsets.UTF_8);
     }
     public void format(Charset charset){
         try {
@@ -396,7 +425,7 @@ public class WDocument extends WElement {
             zip_replaces.put("word/_rels/document.xml.rels", DomUtil.format(rels));
             ZipUtil.replace(file, zip_replaces, charset);
         }catch (Exception e){
-            e.printStackTrace();
+            log.error("格式化异常", e);
         }
     }
 
@@ -453,16 +482,12 @@ public class WDocument extends WElement {
                         }
                     }
                 }catch (Exception e){
-                    e.printStackTrace();
+                    log.error("解析预定义标签异常", e);
                 }
             }
         }
     }
 
-
-    public void mergePlaceholder(){
-        mergePlaceholder(src);
-    }
     /**
      * 合并同一个段落中占位符 ${key} 拆分到多个个t中的情况<br/>
      * 注意只有换行、回车、书签可以破坏占位符
@@ -480,9 +505,6 @@ public class WDocument extends WElement {
                 DocxUtil.mergePlaceholder(p);
             }
         }
-    }
-    public void mergeTag(){
-        mergeTag(src);
     }
 
     /**
@@ -692,7 +714,7 @@ public class WDocument extends WElement {
             checkContentTypes(root, "pict","image/pict");
             ZipUtil.replace(file,"[Content_Types].xml", DomUtil.format(doc));
         }catch (Exception e){
-            e.printStackTrace();
+            log.error("解析内容类型异常", e);
         }
     }
     private void checkContentTypes(Element root, String extension, String type){
@@ -998,7 +1020,7 @@ public class WDocument extends WElement {
     /**
      * 替换书签
      * @param start 开始书签
-     * @replaces K:v
+     * @param context context
      */
     private void replaceBookmark(Element start, Context context){
         String id = start.attributeValue("id");
@@ -1076,7 +1098,7 @@ public class WDocument extends WElement {
             }
         }catch (Exception e){
             log.error("xml格式异常:{}",html);
-            e.printStackTrace();
+            log.error("xml格式异常", e);
         }
         return list;
     }
@@ -1139,24 +1161,13 @@ public class WDocument extends WElement {
         }
         return false;
     }
-    // 当element位置开始把parent拆分(element不一定是parent直接子级)
-    private void split(Element element){
-        Element parent = parent(element,"p");
-        int pindex = DocxUtil.index(parent);
-        split(parent.getParent(), parent, element, pindex);
-    }
-    private Element split(Element box, Element parent, Element stop, int index){
-        Element element = null;
-        if(null != parent){
-            List<Element> elements = parent.elements();
-            for(Element item:elements){
-
-            }
-        }
-        return element;
+    public boolean isAutoRecombine() {
+        return autoRecombine;
     }
 
-
+    public void setAutoRecombine(boolean autoRecombine) {
+        this.autoRecombine = autoRecombine;
+    }
 
     public Element table(Element box, Element after, Element src){
 
@@ -1514,7 +1525,7 @@ public class WDocument extends WElement {
                 }
             }
         }catch (Exception e){
-            e.printStackTrace();
+            log.error("合成word异常", e);
         }
         return newPrev;
     }
@@ -1634,7 +1645,7 @@ public class WDocument extends WElement {
             imgRel.addAttribute("Type","http://schemas.openxmlformats.org/officeDocument/2006/relationships/image");
             imgRel.addAttribute("Target","media/"+img.getName());
         }catch (Exception e){
-            e.printStackTrace();
+            log.error("生成图片异常", e);
         }
 
         Element draw = r.addElement("w:drawing");
