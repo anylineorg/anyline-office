@@ -489,13 +489,185 @@ public class DocxUtil {
         return name;
     }
     public static void parseTag(WDocument doc, Element box, Context context){
-
+        //全部t标签
+        List<Element> ts = DomUtil.elements(box, "t");
+        int size = ts.size();
+        List<Element> removes = new ArrayList<>();
+        for(int i = 0; i < size; i++){
+            Element t = ts.get(i);
+            String txt = t.getText();
+            if(txt.contains("<")){
+                List<Element> items = new ArrayList<>(); //tag标签头 标签体 标签尾所在的t
+                items.add(t);
+                if(!RegularUtil.isFullTag(txt)){//如果不是完整标签(需要有开始和结束或自闭合)继续拼接下一个直到完成或失败
+                    items = tagNext(txt, ts, i+1);
+                    if(!items.isEmpty()) {
+                        txt = t.getText() + DocxUtil.text(items);
+                        removes.addAll(items);
+                        Element last = items.get(items.size() - 1);
+                        i = ts.indexOf(last);
+                    }else{
+                        continue;
+                    }
+                }
+                try {
+                    txt = parseTag(doc, items, txt, context);
+                    t.setText(txt);
+                }catch (Exception e){
+                    e.printStackTrace();
+                }
+            }
+        }
+        remove(removes);
     }
+    public static String tagFormat(String txt){
+        txt = txt.replace("“", "'").replace("”", "'").replace("’", "'").replace("‘", "'");
+        return txt;
+    }
+    /**
+     * 解析标签
+     * @param doc doc
+     * @param ts 标签所在的全部t
+     * @param txt 标签文本
+     * @param context context
+     * @return String
+     * @throws Exception 解析异常
+     */
     public static String parseTag(WDocument doc, List<Element> ts, String txt, Context context) throws Exception{
         if(null == txt){
             return "";
         }
-        txt = txt.replace("”", "\"");
+        if(ts.isEmpty()){
+            return "";
+        }
+        List<Element> tops = new ArrayList<>();//ts所在的最上级table或p
+        for(Element t:ts){
+            Element top = DocxUtil.getParent(t, "tbl");
+            if(null == top){
+                top = DocxUtil.getParent(t, "p");
+            }
+            if(null != top && !tops.contains(top)){
+                tops.add(top);
+            }
+        }
+        if(tops.size() == 1){
+            return parseSimpleTag(doc, ts, txt, context);
+        }
+        txt = tagFormat(txt);
+        /*
+         * 这里 不要把内层标签单独拆出来，因为外层标签可能 会设置新变量值影响内层
+         */
+        List<String> tags = RegularUtil.fetchOutTag(txt);
+        for(String tag:tags){
+            //标签name如<aol:img 中的img
+            String name = tagName(tag, "aol:");
+            String head = RegularUtil.fetchTagHead(tag);
+            String foot = "</aol:"+name+">";
+            if(head.endsWith("/>")){
+                foot = null;
+            }
+            //找到起止top
+            Element first_top = tops.get(0);
+            Element last_top = tops.get(tops.size()-1);
+
+            String first_top_text = text(first_top);
+            String last_top_text = text(last_top);
+            //定位需要标签体的tops
+            int body_top_index_fr = 0;
+            int body_top_index_to = tops.size()-1;
+            if(first_top_text.trim().endsWith(head)){
+                //以标签头结尾 标签体在下一个top
+                body_top_index_fr = 1;
+            }
+            if(null != foot && last_top_text.trim().startsWith(foot)){
+                body_top_index_to = body_top_index_to -1 ;
+            }
+            List<Element> body_tops = new ArrayList<>();
+            for(int i=body_top_index_fr; i <= body_top_index_to; i++){
+                body_tops.add(tops.get(i));
+            }
+
+            boolean isPre = false;
+            if("pre".equals(name)){
+                //<aol:pre id="c"/>
+                isPre = true;
+            }else{
+                //<aol:date pre="c"
+                String preId = RegularUtil.fetchAttributeValue(tag, "pre");
+                if(null != preId){
+                    isPre = true;
+                }
+            }
+            String html = "";
+            if(!isPre) {
+                Tag instance = instance(doc, tag);
+                if (null == instance) {
+                    log.error("未识别的标签名称:{}", name);
+                }
+                if (null != instance) {
+                    //复制占位值
+                    instance.init(doc);
+                    instance.wts(ts);
+                    instance.tops(body_tops);
+                    instance.context(context);
+                    //把 aol标签解析成html标签 下一步会解析html标签
+                    html = instance.parse(tag);
+                    //instance.release();
+                }
+            }
+            //txt = txt.replace(tag, html);
+            txt = BasicUtil.replaceFirst(txt, tag, html);
+            //如果有子标签 应该在父标签中一块解析完
+            /*if(txt.contains("<aol:")){
+                txt = parseTag(txt, variables);
+            }*/
+        }
+        return txt;
+    }
+    public static Tag instance(WDocument doc, String tag){
+        Tag instance = null;
+        String name = tagName(tag, "aol:");
+        String parse = tag; //解析的标签体
+        //先执行外层的 外层需要设置新变量值
+        if (null == name) {
+            log.error("未识别的标签格式:{}", tag);
+        } else {
+            //<aol:date format="" value=""/>
+            instance = doc.tag(name);
+        }
+        String ref_text = null;
+        String refId = RegularUtil.fetchAttributeValue(tag, "ref");
+        if (null != refId) {
+            ref_text = doc.ref(refId);
+        }
+        if(null == instance) {
+            //<aol:c/>
+            refId = name;
+            String define = doc.ref(refId);
+            ref_text = define;
+            if (null != define) {
+                //<aol:c/>
+                //<aol:date ref="c" format="" value=""/>
+                parse = define;
+                name = tagName(parse, "aol:");
+                if (null == name) {
+                    log.error("未识别的标签格式:{}", parse);
+                } else {
+                    instance = doc.tag(name);
+                }
+            }
+            instance.ref(ref_text);
+        }
+        return instance;
+    }
+    public static String parseSimpleTag(WDocument doc, List<Element> ts, String txt, Context context) throws Exception{
+        if(null == txt){
+            return "";
+        }
+        if(ts.isEmpty()){
+            return "";
+        }
+        txt = tagFormat(txt);
         //String reg = "(?i)(<aol:(\\w+)[^<]*?>)[^<]*(</aol:\\2>)";
         //这里 不要把内层标签独立拆出来，因为外层标签可能 会设置新变量值影响内层
         List<String> tags = RegularUtil.fetchOutTag(txt);
@@ -516,38 +688,7 @@ public class DocxUtil {
             String html = "";
             if(!isPre) {
                 //不是预定义
-                String parse = tag; //解析的标签体
-                Tag instance = null;
-                //先执行外层的 外层需要设置新变量值
-                if (null == name) {
-                    log.error("未识别的标签格式:{}", tag);
-                } else {
-                    //<aol:date format="" value=""/>
-                    instance = doc.tag(name);
-                }
-                String ref_text = null;
-                String refId = RegularUtil.fetchAttributeValue(tag, "ref");
-                if (null != refId) {
-                    ref_text = doc.ref(refId);
-                }
-                if(null == instance) {
-                    //<aol:c/>
-                    refId = name;
-                    String define = doc.ref(refId);
-                    ref_text = define;
-                    if (null != define) {
-                        //<aol:c/>
-                        //<aol:date ref="c" format="" value=""/>
-                        parse = define;
-                        name = tagName(parse, "aol:");
-                        if (null == name) {
-                            log.error("未识别的标签格式:{}", parse);
-                        } else {
-                            instance = doc.tag(name);
-                        }
-                    }
-                }
-
+                Tag instance = instance(doc, tag);
                 if (null == instance) {
                     log.error("未识别的标签名称:{}", name);
                 }
@@ -556,7 +697,6 @@ public class DocxUtil {
                     instance.init(doc);
                     instance.wts(ts);
                     instance.context(context);
-                    instance.ref(ref_text);
                     //把 aol标签解析成html标签 下一步会解析html标签
                     html = instance.parse(tag);
                     //instance.release();
@@ -570,6 +710,69 @@ public class DocxUtil {
             }*/
         }
         return txt;
+    }
+    /**
+     * 获取最外层tag所在的全部t
+     * @param items 搜索范围
+     * @param start 开始标记 &lt;或&lt;aol:
+     * @param index 开始位置
+     * @return ts
+     */
+    public static List<Element> tagNext(String start, List<Element> items, int index){
+        List<Element> list = new ArrayList<>();
+        int size = items.size();
+        String full = "<"+RegularUtil.cut(start, "<", RegularUtil.TAG_END);
+        for(int i=index; i<size; i++){
+            Element item = items.get(i);
+            list.add(item);
+            String cur = item.getText();
+            full += cur;
+            if(BasicUtil.isEmpty(cur.trim())){
+                continue;
+            }
+            full = full.replace("\"", "'");
+            String name = null;
+            if(full.length() > 5){
+                if(!full.trim().startsWith("<aol:")){
+                    //不是标签
+                    return new ArrayList<>();
+                }
+                name = RegularUtil.cut(full, "aol:", " ");
+            }
+            if(null != name){
+                String head ="<aol:" + name;
+                String foot_d = "</aol:"+name+">";
+                String foot_s = "/>";
+                int end_d = full.indexOf(foot_d);
+                int end_s = full.indexOf(foot_s);
+                String foot = foot_d;
+                int end = end_d;
+                if(end_s != -1){
+                    //检测是否是单标签
+                    String chk_s = full.substring(0, end_s);
+                    if (!chk_s.contains(">")) {
+                        //单标签结束
+                        break;
+                    }else{
+                        //<aol:if test='${total>10}' var='if1'/>
+                        //或者>在引号内
+                        chk_s = chk_s.substring(0, chk_s.lastIndexOf(">"));
+                        if(!BasicUtil.isFullString(chk_s)){
+                            break;
+                        }
+                    }
+                }
+                if(end_d != -1){
+                    int head_count = BasicUtil.charCount(full, head);
+                    int foot_count = BasicUtil.charCount(full, foot);
+                    if(foot_count == head_count){
+                        //嵌套没有拆碎 否则说明缺少结束标签需要继续查找
+                        break;
+                    }
+                }
+            }
+        }
+        return list;
     }
     public static void border(Element border, Map<String, String> styles){
         border(border,"top", styles);
@@ -589,7 +792,7 @@ public class DocxUtil {
         int dxa = DocxUtil.dxa(width);
         int line = ((int)(DocxUtil.dxa2pt(dxa)*8)/4*4);
         if(BasicUtil.isNotEmpty(width)){
-            item = addElement(border, side);
+            item = element(border, side);
             item.addAttribute("w:sz", line+"");
             item.addAttribute("w:val", style);
             item.addAttribute("w:color", color);
@@ -606,7 +809,7 @@ public class DocxUtil {
         String width = styles.get("padding-"+side);
         int dxa = DocxUtil.dxa(width);
         if(BasicUtil.isNotEmpty(width)){
-            Element item = addElement(margin, side);
+            Element item = element(margin, side);
             item.addAttribute("w:w", dxa+"");
             item.addAttribute("w:type",  "dxa");
         }
@@ -641,7 +844,7 @@ public class DocxUtil {
             }
             if(pt>0){
                 // <w:sz w:val="28"/>
-                addElement(pr, "sz","val", pt+"");
+                element(pr, "sz","val", pt+"");
             }
         }
         // 加粗
@@ -650,7 +853,7 @@ public class DocxUtil {
             int weight = BasicUtil.parseInt(fontWeight,0);
             if(weight >=700){
                 // <w:b w:val="true"/>
-                addElement(pr, "b","val","true");
+                element(pr, "b","val","true");
             }
         }
         // 下划线
@@ -658,9 +861,9 @@ public class DocxUtil {
         if(null != underline){
             if(underline.equalsIgnoreCase("true") || underline.equalsIgnoreCase("single")){
                 // <w:u w:val="single"/>
-                addElement(pr, "u","val","single");
+                element(pr, "u","val","single");
             }else{
-                addElement(pr, "u","val",underline);
+                element(pr, "u","val",underline);
                 /*dash - a dashed line
                 dashDotDotHeavy - a series of thick dash, dot, dot characters
                 dashDotHeavy - a series of thick dash, dot characters
@@ -687,9 +890,9 @@ public class DocxUtil {
         if(null != strike){
             if(strike.equalsIgnoreCase("true")){
                 // <w:dstrike w:val="true"/>
-                addElement(pr, "dstrike","val","true");
+                element(pr, "dstrike","val","true");
             }else if("none".equalsIgnoreCase(strike) || "false".equalsIgnoreCase(strike)){
-                addElement(pr, "dstrike","val","false");
+                element(pr, "dstrike","val","false");
             }
         }
         // 斜体
@@ -697,47 +900,47 @@ public class DocxUtil {
         if(null != italics){
             if(italics.equalsIgnoreCase("true")){
                 // <w:dstrike w:val="true"/>
-                addElement(pr, "i","val","true");
+                element(pr, "i","val","true");
             }else if("none".equalsIgnoreCase(italics) || "false".equalsIgnoreCase(italics)){
-                addElement(pr, "i","val","false");
+                element(pr, "i","val","false");
             }
         }
         String fontFamily = styles.get("font-family");
         if(null != fontFamily){
-            addElement(pr, "rFonts","eastAsia",fontFamily);
+            element(pr, "rFonts","eastAsia",fontFamily);
         }
         String fontFamilyAscii = styles.get("font-family-ascii");
         if(null != fontFamilyAscii){
-            addElement(pr, "rFonts","ascii",fontFamilyAscii);
+            element(pr, "rFonts","ascii",fontFamilyAscii);
         }
         String fontFamilyEast = styles.get("font-family-east");
         if(null != fontFamilyEast){
-            addElement(pr, "rFonts","eastAsia",fontFamilyEast);
+            element(pr, "rFonts","eastAsia",fontFamilyEast);
         }
         fontFamilyEast = styles.get("font-family-eastAsia");
         if(null != fontFamilyEast){
-            addElement(pr, "rFonts","eastAsia",fontFamilyEast);
+            element(pr, "rFonts","eastAsia",fontFamilyEast);
         }
         String fontFamilyhAnsi = styles.get("font-family-height");
         if(null != fontFamilyhAnsi){
-            addElement(pr, "rFonts","hAnsi",fontFamilyhAnsi);
+            element(pr, "rFonts","hAnsi",fontFamilyhAnsi);
         }
         fontFamilyhAnsi = styles.get("font-family-hAnsi");
         if(null != fontFamilyhAnsi){
-            addElement(pr, "rFonts","hAnsi",fontFamilyhAnsi);
+            element(pr, "rFonts","hAnsi",fontFamilyhAnsi);
         }
         String fontFamilyComplex = styles.get("font-family-complex");
         if(null != fontFamilyComplex){
-            addElement(pr, "rFonts","cs",fontFamilyComplex);
+            element(pr, "rFonts","cs",fontFamilyComplex);
         }
         fontFamilyComplex = styles.get("font-family-cs");
         if(null != fontFamilyComplex){
-            addElement(pr, "rFonts","cs",fontFamilyComplex);
+            element(pr, "rFonts","cs",fontFamilyComplex);
         }
 
         String fontFamilyHint = styles.get("font-family-hint");
         if(null != fontFamilyHint){
-            addElement(pr, "rFonts","hint",fontFamilyHint);
+            element(pr, "rFonts","hint",fontFamilyHint);
         }
         // <w:rFonts w:ascii="Adobe Gothic Std B" w:eastAsia="宋体" w:hAnsi="宋体" w:cs="宋体" w:hint="eastAsia"/>
     }
@@ -746,9 +949,9 @@ public class DocxUtil {
         String color = styles.get("background-color");
         if(null != color){
             // <w:shd w:val="clear" w:color="auto" w:fill="FFFF00"/>
-            DocxUtil.addElement(pr, "shd", "color","auto");
-            DocxUtil.addElement(pr, "shd", "val","clear");
-            DocxUtil.addElement(pr, "shd", "fill",color.replace("#",""));
+            DocxUtil.element(pr, "shd", "color","auto");
+            DocxUtil.element(pr, "shd", "val","clear");
+            DocxUtil.element(pr, "shd", "fill",color.replace("#",""));
         }
     }
 
@@ -760,8 +963,8 @@ public class DocxUtil {
      * @param value attribute value
      * @return Element
      */
-    public static Element addElement(Element parent, String tag, String key, String value){
-        Element element = DocxUtil.addElement(parent,tag);
+    public static Element element(Element parent, String tag, String key, String value){
+        Element element = DocxUtil.element(parent,tag);
         addAttribute(element, key, value);
         return element;
     }
@@ -782,11 +985,22 @@ public class DocxUtil {
         }
         element.addAttribute("w:"+key, value);
     }
-    public static Element addElement(Element parent, String tag){
+
+    /**
+     * 添加节点，如果已经有了 就用原来的
+     * @param parent 上级
+     * @param tag name
+     * @return element
+     */
+    public static Element element(Element parent, String tag){
         Element element = parent.element(tag);
         if(null == element){
             element = parent.addElement("w:"+tag);
         }
+        return element;
+    }
+    public static Element addElement(Element parent, String tag){
+        Element element =  parent.addElement("w:"+tag);
         return element;
     }
 
@@ -928,7 +1142,7 @@ public class DocxUtil {
                 //开始合并
                 full = "";
                 mergeText(merges);
-                i+= merges.size()-1;
+                //i+= merges.size()-1;
                 merges.clear();
             }
         }
@@ -944,15 +1158,17 @@ public class DocxUtil {
         int size = ts.size();
         List<Element> items = new ArrayList<>();
         String full = "";
+        List<Element> splits = new ArrayList<>();
         for(int i = 0; i < size; i++){
             Element t = ts.get(i);
             full += t.getText();
             if(full.contains("<")){
                 items.add(t);
                 if(checkTagClose(full)){
+                    splits.add(items.get(0));
                     //这里不需要是一个完整标签，是完整开头或完整结尾都可以
                     DocxUtil.mergeText(items);
-                    i += items.size() - 1;
+                    //i += items.size() - 1;
                     full = "";
                     items.clear();
                 }
@@ -961,6 +1177,76 @@ public class DocxUtil {
                 items.clear();
             }
         }
+        for(Element split:splits){
+            splitTag(split);
+        }
+    }
+
+    /**
+     * 拆分标签 head body foot 及前后缀拆到独立的t中
+     * @param t wt
+     */
+    public static void splitTag(Element t){
+        String txt = t.getText();
+        List<String> list = splitTag(txt);
+        int size = list.size();
+        if(size > 1){
+            Element ref = t;
+            Element parent = t.getParent();
+            for (int i=0; i<size; i++) {
+                String item = list.get(i);
+                if(i == 0){
+                    t.setText(item);
+                }else {
+                    Element element = DocxUtil.addElement(parent, "t");
+                    DocxUtil.after(element, ref);
+                    element.setText(item);
+                    ref = element;
+                }
+            }
+        }
+    }
+    /**
+     * 拆分标签 head body foot 及前后缀拆到独立的t中
+     * @param text text
+     */
+    public static List<String> splitTag(String text){
+        List<String> list = new ArrayList<>();
+        text = tagFormat(text);
+        int fr = 0;
+        while (true){
+            if(text.isEmpty()){
+                break;
+            }
+            int idx = text.indexOf("<", fr);
+            if(idx == -1){
+                list.add(text);
+                break;
+            }
+            if(!text.startsWith("<")){
+                //有前缀
+                String prefix = text.substring(0, idx);
+                if(BasicUtil.isFullString(prefix)){
+                    list.add(prefix);
+                    text = text.substring(idx);
+                    fr = 0;
+                }else{
+                    fr = idx +1;
+                }
+            }else{
+                //以<开头
+                idx = text.indexOf(">", idx);
+                String head = text.substring(0, idx+1);
+                if(BasicUtil.isFullString(head)){
+                    list.add(head);
+                    text = text.substring(idx+1);
+                    fr = 0;
+                }else{
+                    fr = idx +1;
+                }
+            }
+        }
+        return list;
     }
 
     /**
@@ -970,9 +1256,7 @@ public class DocxUtil {
      * @return boolean
      */
     public static boolean checkTagClose(String txt){
-        String chk = txt.replace("\"", "'")
-            .replace("”", "'")
-            .replace("‘", "'");
+        String chk = tagFormat(txt).replace("\"", "'");
         chk = chk.replaceAll("'.*?'", "''");
         //<aol:if></aol:if> <aol:number/>
         if(!chk.contains("<aol:") && !chk.contains("</aol:")){
@@ -991,7 +1275,7 @@ public class DocxUtil {
             idx = chk.indexOf(">");
             if(idx != -1){
                 chk = chk.substring(0, idx);
-                if(BasicUtil.charCount(chk, "'")%2 == 0){
+                if(BasicUtil.isFullString(chk)){
                     return true;
                 }
             }
@@ -1003,20 +1287,34 @@ public class DocxUtil {
         int size = ts.size();
         if(size > 1){
             String text = DocxUtil.text(ts);
+            text = tagFormat(text);
             Element first = ts.get(0);
             first.setText(text);
             for(int i=1; i<size; i++){
                 Element t = ts.get(i);
-                Element r = t.getParent();
-                if(null != r) {
-                    r.remove(t);
-                    if(r.elements("t").isEmpty()){
-                        r.getParent().remove(r);
-                    }
-                }else{
-                    log.error("重复删除:{}", t.getText());
+                remove(t);
+            }
+        }
+    }
+    public static void remove(List<Element> elements){
+        int size = elements.size();
+        for(int i=0; i<size; i++){
+            Element element = elements.get(i);
+            remove(element);
+        }
+    }
+    public static void remove(Element element){
+        Element parent = element.getParent();
+        if(null != parent){
+            parent.remove(element);
+            String pn = parent.getName();
+            if("r".equalsIgnoreCase(pn)){
+                if(parent.elements("t").isEmpty() && parent.elements("br").isEmpty()){
+                    parent.getParent().remove(parent);
                 }
             }
+        }else{
+            log.error("重复删除:{}", element.getText());
         }
     }
 
@@ -1056,7 +1354,7 @@ public class DocxUtil {
         }
         String name = element.getName();
         String prName = name+"Pr";
-        Element pr = DocxUtil.addElement(element, prName);
+        Element pr = DocxUtil.element(element, prName);
         //pr需要放在第一个位置 否则样式对后面的内容可能无效
         List<Element> elements = element.elements();
         if(elements.size() > 1){
@@ -1070,45 +1368,45 @@ public class DocxUtil {
                     continue;
                 }
                 if(sk.equalsIgnoreCase("list-style-type")){
-                    DocxUtil.addElement(pr, "pStyle", "val",sv);
+                    DocxUtil.element(pr, "pStyle", "val",sv);
                 }else if(sk.equalsIgnoreCase("list-lvl")){
-                    Element numPr = DocxUtil.addElement(pr,"numPr");
-                    DocxUtil.addElement(numPr, "ilvl", "val",sv+"");
+                    Element numPr = DocxUtil.element(pr,"numPr");
+                    DocxUtil.element(numPr, "ilvl", "val",sv+"");
                 }else if(sk.equalsIgnoreCase("numFmt")){
-                    Element numPr = DocxUtil.addElement(pr,"numPr");
-                    DocxUtil.addElement(numPr, "numFmt", "val",sv+"");
+                    Element numPr = DocxUtil.element(pr,"numPr");
+                    DocxUtil.element(numPr, "numFmt", "val",sv+"");
                 }else if ("text-align".equalsIgnoreCase(sk)) {
-                    DocxUtil.addElement(pr, "jc","val", sv);
+                    DocxUtil.element(pr, "jc","val", sv);
                 }else if(sk.equalsIgnoreCase("margin-left")){
-                    DocxUtil.addElement(pr, "ind", "left",DocxUtil.dxa(sv)+"");
+                    DocxUtil.element(pr, "ind", "left",DocxUtil.dxa(sv)+"");
                 }else if(sk.equalsIgnoreCase("margin-right")){
-                    DocxUtil.addElement(pr, "ind", "right",DocxUtil.dxa(sv)+"");
+                    DocxUtil.element(pr, "ind", "right",DocxUtil.dxa(sv)+"");
                 }else if(sk.equalsIgnoreCase("margin-top")){
-                    DocxUtil.addElement(pr, "spacing", "before",DocxUtil.dxa(sv)+"");
+                    DocxUtil.element(pr, "spacing", "before",DocxUtil.dxa(sv)+"");
                 }else if(sk.equalsIgnoreCase("margin-bottom")){
-                    DocxUtil.addElement(pr, "spacing", "after",DocxUtil.dxa(sv)+"");
+                    DocxUtil.element(pr, "spacing", "after",DocxUtil.dxa(sv)+"");
                 }else if(sk.equalsIgnoreCase("padding-left")){
-                    DocxUtil.addElement(pr, "ind", "left",DocxUtil.dxa(sv)+"");
+                    DocxUtil.element(pr, "ind", "left",DocxUtil.dxa(sv)+"");
                 }else if(sk.equalsIgnoreCase("padding-right")){
-                    DocxUtil.addElement(pr, "ind", "right",DocxUtil.dxa(sv)+"");
+                    DocxUtil.element(pr, "ind", "right",DocxUtil.dxa(sv)+"");
                 }else if(sk.equalsIgnoreCase("padding-top")){
-                    DocxUtil.addElement(pr, "spacing", "before",DocxUtil.dxa(sv)+"");
+                    DocxUtil.element(pr, "spacing", "before",DocxUtil.dxa(sv)+"");
                 }else if(sk.equalsIgnoreCase("padding-bottom")){
-                    DocxUtil.addElement(pr, "spacing", "after",DocxUtil.dxa(sv)+"");
+                    DocxUtil.element(pr, "spacing", "after",DocxUtil.dxa(sv)+"");
                 }else if(sk.equalsIgnoreCase("text-indent")){
-                    DocxUtil.addElement(pr, "ind", "firstLine",DocxUtil.dxa(sv)+"");
+                    DocxUtil.element(pr, "ind", "firstLine",DocxUtil.dxa(sv)+"");
                 }else if(sk.equalsIgnoreCase("line-height")){
-                    DocxUtil.addElement(pr, "spacing", "line",DocxUtil.dxa(sv)+"");
+                    DocxUtil.element(pr, "spacing", "line",DocxUtil.dxa(sv)+"");
                 }
             }
             if(styles.containsKey("list-style-num")){
                 // 如果在样式里指定了样式
-                Element numPr = DocxUtil.addElement(pr,"numPr");
-                DocxUtil.addElement(numPr, "numId", "val",styles.get("list-style-num"));
+                Element numPr = DocxUtil.element(pr,"numPr");
+                DocxUtil.element(numPr, "numId", "val",styles.get("list-style-num"));
             }else if(styles.containsKey("list-num")){
                 // 运行时自动生成
-                Element numPr = DocxUtil.addElement(pr,"numPr");
-                DocxUtil.addElement(numPr, "numId", "val",styles.get("list-num"));
+                Element numPr = DocxUtil.element(pr,"numPr");
+                DocxUtil.element(numPr, "numId", "val",styles.get("list-num"));
             }
 
             // <div style="page-size-orient:landscape"/>
@@ -1120,7 +1418,7 @@ public class DocxUtil {
                 setOrient(pr, orient, styles);
             }
 
-            Element border = DocxUtil.addElement(pr, "bdr");
+            Element border = DocxUtil.element(pr, "bdr");
             DocxUtil.border(border, styles);
             // DocxUtil.background(pr, styles);
 
@@ -1131,63 +1429,63 @@ public class DocxUtil {
                     continue;
                 }
                 if(sk.equalsIgnoreCase("color")){
-                    addElement(pr, "color", "val", sv.replace("#",""));
+                    element(pr, "color", "val", sv.replace("#",""));
                 }else if(sk.equalsIgnoreCase("background-color")){
                     // <w:highlight w:val="yellow"/>
-                    DocxUtil.addElement(pr, "highlight", "val",sv.replace("#",""));
+                    DocxUtil.element(pr, "highlight", "val",sv.replace("#",""));
                 }else if(sk.equalsIgnoreCase("vertical-align")){
-                    DocxUtil.addElement(pr,"vertAlign", "val", sv );
+                    DocxUtil.element(pr,"vertAlign", "val", sv );
                 }
             }
-            Element border = DocxUtil.addElement(pr, "bdr");
+            Element border = DocxUtil.element(pr, "bdr");
             DocxUtil.border(border, styles);
             DocxUtil.font(pr, styles);
         }else if("tbl".equalsIgnoreCase(name)){
 
-            // DocxUtil.addElement(pr,"tblCellSpacing","w","0");
-            // DocxUtil.addElement(pr,"tblCellSpacing","type","nil");
+            // DocxUtil.element(pr,"tblCellSpacing","w","0");
+            // DocxUtil.element(pr,"tblCellSpacing","type","nil");
 
-            Element mar = DocxUtil.addElement(pr,"tblCellMar");
-            /*DocxUtil.addElement(mar,"top","w","0");
-            DocxUtil.addElement(mar,"top","type","dxa");
-            DocxUtil.addElement(mar,"bottom","w","0");
-            DocxUtil.addElement(mar,"bottom","type","dxa");
-            DocxUtil.addElement(mar,"right","w","0"); // 新版本end
-            DocxUtil.addElement(mar,"right","type","dxa");
-            DocxUtil.addElement(mar,"end","w","0");
-            DocxUtil.addElement(mar,"end","type","dxa");
-            DocxUtil.addElement(mar,"left","w","0");//新版本用start,但07版本用start会报错
-            DocxUtil.addElement(mar,"left","type","dxa");*/
+            Element mar = DocxUtil.element(pr,"tblCellMar");
+            /*DocxUtil.element(mar,"top","w","0");
+            DocxUtil.element(mar,"top","type","dxa");
+            DocxUtil.element(mar,"bottom","w","0");
+            DocxUtil.element(mar,"bottom","type","dxa");
+            DocxUtil.element(mar,"right","w","0"); // 新版本end
+            DocxUtil.element(mar,"right","type","dxa");
+            DocxUtil.element(mar,"end","w","0");
+            DocxUtil.element(mar,"end","type","dxa");
+            DocxUtil.element(mar,"left","w","0");//新版本用start,但07版本用start会报错
+            DocxUtil.element(mar,"left","type","dxa");*/
             for (String sk : styles.keySet()) {
                 String sv = styles.get(sk);
                 if(BasicUtil.isEmpty(sv)){
                     continue;
                 }
                 if(sk.equalsIgnoreCase("width")){
-                    DocxUtil.addElement(pr,"tblW","w", DocxUtil.dxa(sv)+"");
-                    DocxUtil.addElement(pr,"tblW","type", DocxUtil.widthType(sv));
+                    DocxUtil.element(pr,"tblW","w", DocxUtil.dxa(sv)+"");
+                    DocxUtil.element(pr,"tblW","type", DocxUtil.widthType(sv));
                 }else if(sk.equalsIgnoreCase("color")){
                 }else if(sk.equalsIgnoreCase("margin-left")){
-                    DocxUtil.addElement(pr,"tblInd","w",DocxUtil.dxa(sv)+"");
-                    DocxUtil.addElement(pr,"tblInd","type","dxa");
+                    DocxUtil.element(pr,"tblInd","w",DocxUtil.dxa(sv)+"");
+                    DocxUtil.element(pr,"tblInd","type","dxa");
                 }else if(sk.equalsIgnoreCase("padding-left")){
-                    DocxUtil.addElement(mar,"left","w",DocxUtil.dxa(sv)+""); // 新版本用start,但07版本用start会报错
-                    DocxUtil.addElement(mar,"left","type","dxa");
+                    DocxUtil.element(mar,"left","w",DocxUtil.dxa(sv)+""); // 新版本用start,但07版本用start会报错
+                    DocxUtil.element(mar,"left","type","dxa");
                 }else if(sk.equalsIgnoreCase("padding-right")){
-                    DocxUtil.addElement(mar,"right","w",DocxUtil.dxa(sv)+""); // 新版本用end
-                    DocxUtil.addElement(mar,"right","type","dxa");
-                    DocxUtil.addElement(mar,"end","w",DocxUtil.dxa(sv)+"");
-                    DocxUtil.addElement(mar,"end","type","dxa");
+                    DocxUtil.element(mar,"right","w",DocxUtil.dxa(sv)+""); // 新版本用end
+                    DocxUtil.element(mar,"right","type","dxa");
+                    DocxUtil.element(mar,"end","w",DocxUtil.dxa(sv)+"");
+                    DocxUtil.element(mar,"end","type","dxa");
                 }else if(sk.equalsIgnoreCase("padding-top")){
-                    DocxUtil.addElement(mar,"top","w",DocxUtil.dxa(sv)+"");
-                    DocxUtil.addElement(mar,"top","type","dxa");
+                    DocxUtil.element(mar,"top","w",DocxUtil.dxa(sv)+"");
+                    DocxUtil.element(mar,"top","type","dxa");
                 }else if(sk.equalsIgnoreCase("padding-bottom")){
-                    DocxUtil.addElement(mar,"bottom","w",DocxUtil.dxa(sv)+"");
-                    DocxUtil.addElement(mar,"bottom","type","dxa");
+                    DocxUtil.element(mar,"bottom","w",DocxUtil.dxa(sv)+"");
+                    DocxUtil.element(mar,"bottom","type","dxa");
                 }
             }
 
-            Element border = DocxUtil.addElement(pr,"tblBorders");
+            Element border = DocxUtil.element(pr,"tblBorders");
             DocxUtil.border(border, styles);
             DocxUtil.background(pr, styles);
         }else if("tr".equalsIgnoreCase(name)){
@@ -1197,13 +1495,13 @@ public class DocxUtil {
                     continue;
                 }
                 if("repeat-header".equalsIgnoreCase(sk)){
-                    DocxUtil.addElement(pr,"tblHeader","val","true");
+                    DocxUtil.element(pr,"tblHeader","val","true");
                 }else if("min-height".equalsIgnoreCase(sk)){
-                    DocxUtil.addElement(pr,"trHeight","hRule","atLeast");
-                    DocxUtil.addElement(pr,"trHeight","val",(int)DocxUtil.dxa2pt(DocxUtil.dxa(sv))*20+"");
+                    DocxUtil.element(pr,"trHeight","hRule","atLeast");
+                    DocxUtil.element(pr,"trHeight","val",(int)DocxUtil.dxa2pt(DocxUtil.dxa(sv))*20+"");
                 }else if("height".equalsIgnoreCase(sk)){
-                    DocxUtil.addElement(pr,"trHeight","hRule","exact");
-                    DocxUtil.addElement(pr,"trHeight","val",(int)DocxUtil.dxa2pt(DocxUtil.dxa(sv))*20+"");
+                    DocxUtil.element(pr,"trHeight","hRule","exact");
+                    DocxUtil.element(pr,"trHeight","val",(int)DocxUtil.dxa2pt(DocxUtil.dxa(sv))*20+"");
                 }
             }
         }else if("tc".equalsIgnoreCase(name)){
@@ -1213,46 +1511,46 @@ public class DocxUtil {
                     continue;
                 }
 
-                Element mar = DocxUtil.addElement(pr,"tcMar");
-                /*DocxUtil.addElement(mar,"top","w","0");
-                DocxUtil.addElement(mar,"top","type","dxa");
-                DocxUtil.addElement(mar,"bottom","w","0");
-                DocxUtil.addElement(mar,"bottom","type","dxa");
-                DocxUtil.addElement(mar,"right","w","0"); // 新版本end
-                DocxUtil.addElement(mar,"right","type","dxa");
-                DocxUtil.addElement(mar,"end","w","0");
-                DocxUtil.addElement(mar,"end","type","dxa");
-                DocxUtil.addElement(mar,"left","w","0");//新版本用start,但07版本用start会报错
-                DocxUtil.addElement(mar,"left","type","dxa");*/
+                Element mar = DocxUtil.element(pr,"tcMar");
+                /*DocxUtil.element(mar,"top","w","0");
+                DocxUtil.element(mar,"top","type","dxa");
+                DocxUtil.element(mar,"bottom","w","0");
+                DocxUtil.element(mar,"bottom","type","dxa");
+                DocxUtil.element(mar,"right","w","0"); // 新版本end
+                DocxUtil.element(mar,"right","type","dxa");
+                DocxUtil.element(mar,"end","w","0");
+                DocxUtil.element(mar,"end","type","dxa");
+                DocxUtil.element(mar,"left","w","0");//新版本用start,但07版本用start会报错
+                DocxUtil.element(mar,"left","type","dxa");*/
                 if("vertical-align".equalsIgnoreCase(sk)){
-                    DocxUtil.addElement(pr,"vAlign", "val", sv );
+                    DocxUtil.element(pr,"vAlign", "val", sv );
                 }else if("text-align".equalsIgnoreCase(sk)){
-                    DocxUtil.addElement(pr, "jc","val", sv);
+                    DocxUtil.element(pr, "jc","val", sv);
                 }else if(sk.equalsIgnoreCase("white-space")){
-                    DocxUtil.addElement(pr,"noWrap");
+                    DocxUtil.element(pr,"noWrap");
                 }else if(sk.equalsIgnoreCase("width")){
-                    DocxUtil.addElement(pr,"tcW","w",DocxUtil.dxa(sv)+"");
-                    DocxUtil.addElement(pr,"tcW","type",DocxUtil.widthType(sv));
+                    DocxUtil.element(pr,"tcW","w",DocxUtil.dxa(sv)+"");
+                    DocxUtil.element(pr,"tcW","type",DocxUtil.widthType(sv));
                 }else if(sk.equalsIgnoreCase("padding-left")){
-                    DocxUtil.addElement(mar,"left","w",DocxUtil.dxa(sv)+""); // 新版本用start,但07版本用start会报错
-                    DocxUtil.addElement(mar,"left","type","dxa");
+                    DocxUtil.element(mar,"left","w",DocxUtil.dxa(sv)+""); // 新版本用start,但07版本用start会报错
+                    DocxUtil.element(mar,"left","type","dxa");
                 }else if(sk.equalsIgnoreCase("padding-right")){
-                    DocxUtil.addElement(mar,"right","w",DocxUtil.dxa(sv)+""); // 新版本用end
-                    DocxUtil.addElement(mar,"right","type","dxa");
-                    DocxUtil.addElement(mar,"end","w",DocxUtil.dxa(sv)+"");
-                    DocxUtil.addElement(mar,"end","type","dxa");
+                    DocxUtil.element(mar,"right","w",DocxUtil.dxa(sv)+""); // 新版本用end
+                    DocxUtil.element(mar,"right","type","dxa");
+                    DocxUtil.element(mar,"end","w",DocxUtil.dxa(sv)+"");
+                    DocxUtil.element(mar,"end","type","dxa");
                 }else if(sk.equalsIgnoreCase("padding-top")){
-                    DocxUtil.addElement(mar,"top","w",DocxUtil.dxa(sv)+"");
-                    DocxUtil.addElement(mar,"top","type","dxa");
+                    DocxUtil.element(mar,"top","w",DocxUtil.dxa(sv)+"");
+                    DocxUtil.element(mar,"top","type","dxa");
                 }else if(sk.equalsIgnoreCase("padding-bottom")){
-                    DocxUtil.addElement(mar,"bottom","w",DocxUtil.dxa(sv)+"");
-                    DocxUtil.addElement(mar,"bottom","type","dxa");
+                    DocxUtil.element(mar,"bottom","w",DocxUtil.dxa(sv)+"");
+                    DocxUtil.element(mar,"bottom","type","dxa");
                 }
             }
-            // 
-            Element padding = DocxUtil.addElement(pr,"tcMar");
+            //
+            Element padding = DocxUtil.element(pr,"tcMar");
             DocxUtil.padding(padding, styles);
-            Element border = DocxUtil.addElement(pr,"tcBorders");
+            Element border = DocxUtil.element(pr,"tcBorders");
             DocxUtil.border(border, styles);
             DocxUtil.background(pr, styles);
         }
@@ -1294,17 +1592,17 @@ public class DocxUtil {
             bottom = BasicUtil.evl(bottom, "1440").toString();
             left = BasicUtil.evl(left, "1531").toString();
         }
-        Element sectPr = DocxUtil.addElement(pr,"sectPr");
-        DocxUtil.addElement(sectPr,"pgSz","w", w);
-        DocxUtil.addElement(sectPr,"pgSz","h", h);
-        DocxUtil.addElement(sectPr,"pgSz","orient", orient);
+        Element sectPr = DocxUtil.element(pr,"sectPr");
+        DocxUtil.element(sectPr,"pgSz","w", w);
+        DocxUtil.element(sectPr,"pgSz","h", h);
+        DocxUtil.element(sectPr,"pgSz","orient", orient);
 
-        DocxUtil.addElement(sectPr,"pgMar","top", top);
-        DocxUtil.addElement(sectPr,"pgMar","right", right);
-        DocxUtil.addElement(sectPr,"pgMar","bottom", bottom);
-        DocxUtil.addElement(sectPr,"pgMar","left", left);
-        DocxUtil.addElement(sectPr,"pgMar","header", header);
-        DocxUtil.addElement(sectPr,"pgMar","footer", footer);
+        DocxUtil.element(sectPr,"pgMar","top", top);
+        DocxUtil.element(sectPr,"pgMar","right", right);
+        DocxUtil.element(sectPr,"pgMar","bottom", bottom);
+        DocxUtil.element(sectPr,"pgMar","left", left);
+        DocxUtil.element(sectPr,"pgMar","header", header);
+        DocxUtil.element(sectPr,"pgMar","footer", footer);
 
     }
     public static void removeAttribute(Element element, String attribute){
