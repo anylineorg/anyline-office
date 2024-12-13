@@ -67,8 +67,8 @@ public class WTr extends WElement {
 
     public WTr setHeight(String height){
         int dxa = DocxUtil.dxa(height);
-        Element pr = DocxUtil.element(src, "trPr");
-        DocxUtil.element(pr,"trHeight", "val", dxa+"" );
+        Element pr = DocxUtil.addElement(src, "trPr");
+        DocxUtil.addElement(pr,"trHeight", "val", dxa+"" );
         return this;
     }
     public WTr setHeight(int height){

@@ -297,9 +297,9 @@ public class WTc extends WElement {
      * @return wtc
      */
     private void removeBorder(Element tc, String side){
-        Element tcPr = DocxUtil.element(tc, "tcPr");
-        Element borders = DocxUtil.element(tcPr, "tcBorders");
-        Element border = DocxUtil.element(borders, side);
+        Element tcPr = DocxUtil.addElement(tc, "tcPr");
+        Element borders = DocxUtil.addElement(tcPr, "tcBorders");
+        Element border = DocxUtil.addElement(borders, side);
         border.addAttribute("w:val","nil");
         DocxUtil.removeAttribute(border, "sz");
         DocxUtil.removeAttribute(border, "space");
@@ -489,9 +489,9 @@ public class WTc extends WElement {
         return this;
     }
     private void setBorder(Element tc, String side, int size, String color, String style){
-        Element tcPr = DocxUtil.element(tc, "tcPr");
-        Element borders = DocxUtil.element(tcPr, "tcBorders");
-        Element border = DocxUtil.element(borders, side);
+        Element tcPr = DocxUtil.addElement(tc, "tcPr");
+        Element borders = DocxUtil.addElement(tcPr, "tcBorders");
+        Element border = DocxUtil.addElement(borders, side);
         if(null == style) {
             style = "single";
         }
@@ -638,10 +638,10 @@ public class WTc extends WElement {
         return setPadding(tc, side, padding+widthUnit);
     }
     private WTc setPadding(Element tc, String side, String padding){
-        Element pr = DocxUtil.element(tc, "tcPr");
-        Element mar = DocxUtil.element(pr,"tcMar");
-        DocxUtil.element(mar,side,"w",DocxUtil.dxa(padding)+"");
-        DocxUtil.element(mar,side,"type","dxa");
+        Element pr = DocxUtil.addElement(tc, "tcPr");
+        Element mar = DocxUtil.addElement(pr,"tcMar");
+        DocxUtil.addElement(mar,side,"w",DocxUtil.dxa(padding)+"");
+        DocxUtil.addElement(mar,side,"type","dxa");
         return this;
     }
     public WTc setColor(String color){
@@ -670,9 +670,9 @@ public class WTc extends WElement {
     }
 
     public WTc setWidth(String width){
-        Element pr = DocxUtil.element(src, "tcPr");
-        DocxUtil.element(pr, "tcW","w", DocxUtil.dxa(width)+"");
-        DocxUtil.element(pr, "tcW","type", DocxUtil.widthType(width));
+        Element pr = DocxUtil.addElement(src, "tcPr");
+        DocxUtil.addElement(pr, "tcW","w", DocxUtil.dxa(width)+"");
+        DocxUtil.addElement(pr, "tcW","type", DocxUtil.widthType(width));
         return this;
     }
     public WTc setWidth(int width){
@@ -683,19 +683,19 @@ public class WTc extends WElement {
     }
 
     public WTc setAlign(String align){
-        Element pr = DocxUtil.element(src, "tcPr");
-        DocxUtil.element(pr, "jc","val", align);
+        Element pr = DocxUtil.addElement(src, "tcPr");
+        DocxUtil.addElement(pr, "jc","val", align);
         for(WParagraph wp:wps){
             wp.setAlign(align);
         }
         return this;
     }
     public WTc setVerticalAlign(String align){
-        Element pr = DocxUtil.element(src, "tcPr");
+        Element pr = DocxUtil.addElement(src, "tcPr");
         if(align.equals("middle")){
             align = "center";
         }
-        DocxUtil.element(pr,"vAlign", "val", align );
+        DocxUtil.addElement(pr,"vAlign", "val", align );
         return this;
     }
 
@@ -705,10 +705,10 @@ public class WTc extends WElement {
      * @return Wtc
      */
     public WTc setBackgroundColor(String color){
-        Element pr = DocxUtil.element(src, "tcPr");
-        DocxUtil.element(pr, "shd", "color","auto");
-        DocxUtil.element(pr, "shd", "val","clear");
-        DocxUtil.element(pr, "shd", "fill",color.replace("#",""));
+        Element pr = DocxUtil.addElement(src, "tcPr");
+        DocxUtil.addElement(pr, "shd", "color","auto");
+        DocxUtil.addElement(pr, "shd", "val","clear");
+        DocxUtil.addElement(pr, "shd", "fill",color.replace("#",""));
         for(WParagraph wp:wps){
             // wp.setBackgroundColor(color);
         }
@@ -848,9 +848,9 @@ public class WTc extends WElement {
     }
     public WTc setText(String text, Map<String, String> styles){
         DocxUtil.removeContent(src);
-        Element p = DocxUtil.element(src, "p");
-        Element r = DocxUtil.element(p, "r");
-        Element t = DocxUtil.element(r, "t");
+        Element p = DocxUtil.addElement(src, "p");
+        Element r = DocxUtil.addElement(p, "r");
+        Element t = DocxUtil.addElement(r, "t");
         if(root.IS_HTML_ESCAPE) {
             text = HtmlUtil.display(text);
         }
@@ -859,8 +859,8 @@ public class WTc extends WElement {
         return this;
     }
     public WTc addText(String text){
-        Element p = DocxUtil.element(src, "p");
-        Element r = DocxUtil.element(p, "r");
+        Element p = DocxUtil.addElement(src, "p");
+        Element r = DocxUtil.addElement(p, "r");
         Element t = r.addElement("w:t");
         if(root.IS_HTML_ESCAPE) {
             text = HtmlUtil.display(text);

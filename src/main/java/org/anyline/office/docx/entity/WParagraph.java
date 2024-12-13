@@ -51,8 +51,8 @@ public class WParagraph extends WElement {
         for(WRun wr:wrs){
             wr.setColor(color);
         }
-        Element pr = DocxUtil.element(src, "pPr");
-        DocxUtil.element(pr, "color","val", color.replace("#",""));
+        Element pr = DocxUtil.addElement(src, "pPr");
+        DocxUtil.addElement(pr, "color","val", color.replace("#",""));
         return this;
     }
     public WParagraph setFont(String size, String eastAsia, String ascii, String hint){
@@ -61,11 +61,11 @@ public class WParagraph extends WElement {
             wr.setFont(size, eastAsia, ascii, hint);
         }
         int pt = DocxUtil.fontSize(size);
-        Element pr = DocxUtil.element(src, "pPr");
-        DocxUtil.element(pr, "sz","val", pt+"");
-        DocxUtil.element(pr, "rFonts","eastAsia", eastAsia);
-        DocxUtil.element(pr, "rFonts","ascii", ascii);
-        DocxUtil.element(pr, "rFonts","hint", hint);
+        Element pr = DocxUtil.addElement(src, "pPr");
+        DocxUtil.addElement(pr, "sz","val", pt+"");
+        DocxUtil.addElement(pr, "rFonts","eastAsia", eastAsia);
+        DocxUtil.addElement(pr, "rFonts","ascii", ascii);
+        DocxUtil.addElement(pr, "rFonts","hint", hint);
 
         return this;
     }
@@ -74,33 +74,33 @@ public class WParagraph extends WElement {
             wr.setFontSize(size);
         }
         int pt = DocxUtil.fontSize(size);
-        Element pr = DocxUtil.element(src, "pPr");
-        DocxUtil.element(pr, "sz","val", pt+"");
+        Element pr = DocxUtil.addElement(src, "pPr");
+        DocxUtil.addElement(pr, "sz","val", pt+"");
         return this;
     }
     public WParagraph setFontFamily(String font){
         for(WRun wr:wrs){
             wr.setFontFamily(font);
         }
-        Element pr = DocxUtil.element(src, "pPr");
-        DocxUtil.element(pr, "rFonts","eastAsia", font);
-        DocxUtil.element(pr, "rFonts","ascii", font);
-        DocxUtil.element(pr, "rFonts","hAnsi", font);
-        DocxUtil.element(pr, "rFonts","cs", font);
-        DocxUtil.element(pr, "rFonts","hint", font);
+        Element pr = DocxUtil.addElement(src, "pPr");
+        DocxUtil.addElement(pr, "rFonts","eastAsia", font);
+        DocxUtil.addElement(pr, "rFonts","ascii", font);
+        DocxUtil.addElement(pr, "rFonts","hAnsi", font);
+        DocxUtil.addElement(pr, "rFonts","cs", font);
+        DocxUtil.addElement(pr, "rFonts","hint", font);
         return this;
     }
 
     public WParagraph setAlign(String align){
-        Element pr = DocxUtil.element(src, "pPr");
-        DocxUtil.element(pr, "jc","val", align);
+        Element pr = DocxUtil.addElement(src, "pPr");
+        DocxUtil.addElement(pr, "jc","val", align);
         return this;
     }
 
     public WParagraph setBackgroundColor(String color){
-        Element pr = DocxUtil.element(src, "pPr");
+        Element pr = DocxUtil.addElement(src, "pPr");
         color = color.replace("#","");
-        DocxUtil.element(pr, "highlight", "val", color);
+        DocxUtil.addElement(pr, "highlight", "val", color);
         for(WRun wr:wrs){
             wr.setBackgroundColor(color);
         }
@@ -108,7 +108,7 @@ public class WParagraph extends WElement {
     }
 
     public WParagraph setBold(boolean bold){
-        Element pr = DocxUtil.element(src, "pPr");
+        Element pr = DocxUtil.addElement(src, "pPr");
         Element b = pr.element("b");
         if(bold){
             if(null == b){
@@ -125,11 +125,11 @@ public class WParagraph extends WElement {
         return this;
     }
     public WParagraph setUnderline(boolean underline){
-        Element pr = DocxUtil.element(src, "pPr");
+        Element pr = DocxUtil.addElement(src, "pPr");
         Element u = pr.element("u");
         if(underline){
             if(null == u){
-                DocxUtil.element(pr, "u", "val", "single");
+                DocxUtil.addElement(pr, "u", "val", "single");
             }
         }else{
             if(null != u){
@@ -142,7 +142,7 @@ public class WParagraph extends WElement {
         return this;
     }
     public WParagraph setStrike(boolean strike){
-        Element pr = DocxUtil.element(src, "pPr");
+        Element pr = DocxUtil.addElement(src, "pPr");
         Element s = pr.element("strike");
         if(strike){
             if(null == s){
@@ -159,8 +159,8 @@ public class WParagraph extends WElement {
         return this;
     }
     public WParagraph setItalic(boolean italic){
-        Element pr = DocxUtil.element(src, "pPr");
-        DocxUtil.element(pr, "i","val",italic+"");
+        Element pr = DocxUtil.addElement(src, "pPr");
+        DocxUtil.addElement(pr, "i","val",italic+"");
         for(WRun wr:wrs){
             wr.setItalic(italic);
         }

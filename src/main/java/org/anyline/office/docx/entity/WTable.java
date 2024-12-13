@@ -671,9 +671,9 @@ public class WTable extends WElement {
         return src.elements("tr").size();
     }
     public WTable setWidth(String width){
-        Element pr = DocxUtil.element(src, "tblPr");
-        DocxUtil.element(pr, "tcW","w", DocxUtil.dxa(width)+"");
-        DocxUtil.element(pr, "tcW","type", DocxUtil.widthType(width));
+        Element pr = DocxUtil.addElement(src, "tblPr");
+        DocxUtil.addElement(pr, "tcW","w", DocxUtil.dxa(width)+"");
+        DocxUtil.addElement(pr, "tcW","type", DocxUtil.widthType(width));
         return this;
     }
 
@@ -707,17 +707,17 @@ public class WTable extends WElement {
         for(int r=row; r<row+rowspan; r++){
             for(int c=col; c<col+colspan; c++){
                 WTc tc = getTc(r, c);
-                Element pr = DocxUtil.element(tc.getSrc(), "tcPr");
+                Element pr = DocxUtil.addElement(tc.getSrc(), "tcPr");
                 if(rowspan > 1){
                     if(r==row){
-                        DocxUtil.element(pr, "vMerge", "val",   "restart");
+                        DocxUtil.addElement(pr, "vMerge", "val",   "restart");
                     }else{
-                        DocxUtil.element(pr, "vMerge");
+                        DocxUtil.addElement(pr, "vMerge");
                     }
                 }
                 if(colspan>1){
                     if(c==col){
-                        DocxUtil.element(pr, "gridSpan", "val",   colspan+"");
+                        DocxUtil.addElement(pr, "gridSpan", "val",   colspan+"");
                     }else{
                         tc.remove();
                     }
@@ -862,9 +862,9 @@ public class WTable extends WElement {
 
 
     private void removeBorder(Element tbl, String side){
-        Element tcPr = DocxUtil.element(tbl, "tblPr");
-        Element borders = DocxUtil.element(tcPr, "tblBorders");
-        Element border = DocxUtil.element(borders, side);
+        Element tcPr = DocxUtil.addElement(tbl, "tblPr");
+        Element borders = DocxUtil.addElement(tcPr, "tblBorders");
+        Element border = DocxUtil.addElement(borders, side);
         border.addAttribute("w:val","nil");
         DocxUtil.removeAttribute(border, "sz");
         DocxUtil.removeAttribute(border, "space");
@@ -1197,9 +1197,9 @@ public class WTable extends WElement {
      * @param style 样式(默认single)
      */
     private void setBorder(String side, int size, String color, String style){
-        Element tcPr = DocxUtil.element(src, "tblPr");
-        Element borders = DocxUtil.element(tcPr, "tblBorders");
-        Element border = DocxUtil.element(borders, side);
+        Element tcPr = DocxUtil.addElement(src, "tblPr");
+        Element borders = DocxUtil.addElement(tcPr, "tblBorders");
+        Element border = DocxUtil.addElement(borders, side);
         if(null == style) {
             style = "single";
         }

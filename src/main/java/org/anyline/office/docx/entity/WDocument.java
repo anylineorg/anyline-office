@@ -133,7 +133,6 @@ public class WDocument extends WElement {
             tags.put("select", Select.class);
             tags.put("set", Set.class);
             tags.put("sum", Sum.class);
-            tags.put("mark", Mark.class);
 
         }catch (Exception e){
             e.printStackTrace();
@@ -229,12 +228,10 @@ public class WDocument extends WElement {
             //加载文件
             load();
             if(autoMergePlaceholder){
-                recombination();
+                mergePlaceholder();
             }
-            //解析预定义标签
-            predefine();
             //替换占位符前先解析标签
-            parseTag();
+            tag();
             //执行替换
             replace(src, context);
             Map<String, String> zip_replaces = new HashMap<>();
@@ -274,103 +271,6 @@ public class WDocument extends WElement {
         }
     }
 
-    /**
-     * 重新组合
-     * 合并拆分到多个t中的占位符(包含表达式)和aol标签
-     * 拆分标签的前后缀 head body foot到单独的t中
-     * 拆分不在标签内的占位符到单独的t中
-     */
-    public void recombination(boolean save){
-        load();
-        mergePlaceholder();
-        mergeTag();
-        splitPlaceholder();
-        if(save){
-            try {
-                String txt = DomUtil.format(doc);
-                Map<String, String> zip_replaces = new HashMap<>();
-                zip_replaces.put("word/document.xml", txt);
-                ZipUtil.replace(file, zip_replaces, Charset.forName(charset));
-            }catch (Exception e){
-                e.printStackTrace();
-            }
-        }
-    }
-    public void recombination(){
-        recombination(false);
-    }
-
-    /**
-     * 拆分不在标签内的占位符到单独的t中<br/>
-     * 注意:要在合并之后调用，默认每个t中都是完整的占位符
-     */
-    private void splitPlaceholder(){
-        List<Element> ts = DomUtil.elements(src, "t");
-        for(Element t:ts){
-            String text = t.getText();
-            List<String> list = splitPlaceholder(text);
-            int size = list.size();
-            if(size > 1) {
-                Element parent = t.getParent();
-                Element ref = t;
-                for (int i=0; i<size; i++) {
-                    String item = list.get(i);
-                    if(i == 0){
-                        t.setText(item);
-                    }else {
-                        Element element = DocxUtil.addElement(parent, "t");
-                        DocxUtil.after(element, ref);
-                        element.setText(item);
-                        ref = element;
-                    }
-                }
-            }
-        }
-    }
-
-
-    /**
-     * 拆分标签 head body foot 及前后缀拆到独立的t中
-     * @param text text
-     */
-    public static List<String> splitPlaceholder(String text){
-        List<String> list = new ArrayList<>();
-        int fr = 0;
-        while (true){
-            if(text.isEmpty()){
-                break;
-            }
-            int idx = text.indexOf("${", fr);
-            if(idx == -1){
-                list.add(text);
-                break;
-            }
-            if(!text.startsWith("${")){
-                //有前缀
-                String prefix = text.substring(0, idx);
-                if(BasicUtil.isFullString(prefix)){
-                    list.add(prefix);
-                    text = text.substring(idx);
-                    fr = 0;
-                }else{
-                    fr = idx +1;
-                }
-            }else{
-                //以<开头
-                idx = text.indexOf("}", idx);
-                String head = text.substring(0, idx+1);
-                if(BasicUtil.isFullString(head)){
-                    list.add(head);
-                    text = text.substring(idx+1);
-                    fr = 0;
-                }else{
-                    fr = idx +1;
-                }
-            }
-        }
-        return list;
-    }
-
     public void format(){
         format(Charset.forName("UTF-8"));
     }
@@ -403,8 +303,46 @@ public class WDocument extends WElement {
     /**
      * 替换占位符前 先解析标签
      */
-    public void parseTag(){
-        DocxUtil.parseTag(this,  src, context);
+    public void tag(){
+        load();
+        predefine();
+        //全部t标签
+        List<Element> ts = DomUtil.elements(src, "t");
+        int size = ts.size();
+        List<Element> removes = new ArrayList<>();
+        for(int i = 0; i < size; i++){
+            Element t = ts.get(i);
+            String txt = t.getText();
+            if(txt.contains("<")){
+                List<Element> items = new ArrayList<>();
+                items.add(t);
+                if(!RegularUtil.isFullTag(txt)){//如果不是完整标签 继续拼接下一个直到完成或失败
+                    items = tag(txt, ts, i+1);
+                    if(!items.isEmpty()) {
+                        items.add(0, t);
+                        int isize = items.size();
+                        Element last = items.get(isize - 1);
+                        i = ts.indexOf(last);
+                        txt = DocxUtil.text(items);
+                        //t.setText(txt);
+                        for(int r=1; r<isize; r++){
+                            removes.add(items.get(r));
+                        }
+                    }else{
+                        continue;
+                    }
+                }
+                try {
+                    txt = DocxUtil.parseTag(this, items, txt, context);
+                    t.setText(txt);
+                }catch (Exception e){
+                    e.printStackTrace();
+                }
+            }
+        }
+        for(Element remove:removes){
+            remove.setText("");
+        }
     }
     public String ref(String id){
         return predefines.get(id);
@@ -425,11 +363,13 @@ public class WDocument extends WElement {
                 List<Element> items = new ArrayList<>();
                 items.add(t);
                 if(!RegularUtil.isFullTag(txt)){//如果不是完整标签 继续拼接下一个直到完成或失败
-                    items = DocxUtil.tagNext(txt, ts, i+1);
+                    items = tag(txt, ts, i+1);
                     if(!items.isEmpty()) {
-                        txt = t.getText() + DocxUtil.text(items);
-                        Element last = items.get(items.size() - 1);
+                        items.add(0, t);
+                        int isize = items.size();
+                        Element last = items.get(isize - 1);
                         i = ts.indexOf(last);
+                        txt = DocxUtil.text(items);
                     }else{
                         continue;
                     }
@@ -439,7 +379,7 @@ public class WDocument extends WElement {
                     for(String tag:tags){
                         //<aol:pre id="a"/>
                         //<aol:date pre="b"/>
-                        tag = DocxUtil.tagFormat(tag).trim();
+                        tag = tag.replace("”","\"").trim();
                         String pre = RegularUtil.fetchAttributeValue(tag, "pre");
                         String name = RegularUtil.cut("aol:", " ");
                         if(null == name){
@@ -459,6 +399,69 @@ public class WDocument extends WElement {
         }
     }
 
+    /**
+     * 获取最外层tag所在的t
+     * @param items 搜索范围
+     * @param start 开始标记 &lt;或&lt;aol:
+     * @param index 开始位置
+     * @return ts
+     */
+    private List<Element> tag(String start, List<Element> items, int index){
+        List<Element> list = new ArrayList<>();
+        int size = items.size();
+        String full = "<"+RegularUtil.cut(start, "<", RegularUtil.TAG_END);
+        for(int i=index; i<size; i++){
+            Element item = items.get(i);
+            list.add(item);
+            String cur = item.getText();
+            full += cur;
+            if(BasicUtil.isEmpty(cur.trim())){
+                continue;
+            }
+            full = full.replace("\"", "'");
+            String name = null;
+            if(full.length() > 5){
+                if(!full.trim().startsWith("<aol:")){
+                    //不是标签
+                    return new ArrayList<>();
+                }
+                name = RegularUtil.cut(full, "aol:", " ");
+            }
+            if(null != name){
+                String head ="<aol:" + name;
+                String foot_d = "</aol:"+name+">";
+                String foot_s = "/>";
+                int end_d = full.indexOf(foot_d);
+                int end_s = full.indexOf(foot_s);
+                String foot = foot_d;
+                int end = end_d;
+                if(end_s != -1){
+                    //检测是否是单标签
+                    String chk_s = full.substring(0, end_s);
+                    if (!chk_s.contains(">")) {
+                        //单标签结束
+                        break;
+                    }else{
+                        //<aol:if test='${total>10}' var='if1'/>
+                        //或者>在引号内
+                        chk_s = chk_s.substring(0, chk_s.lastIndexOf(">"));
+                        if(BasicUtil.charCount(chk_s, "'")%2==1){
+                            break;
+                        }
+                    }
+                }
+                if(end_d != -1){
+                    int head_count = BasicUtil.charCount(full, head);
+                    int foot_count = BasicUtil.charCount(full, foot);
+                    if(foot_count == head_count){
+                        //嵌套没有拆碎 否则说明缺少结束标签需要继续查找
+                        break;
+                    }
+                }
+            }
+        }
+        return list;
+    }
 
     public void mergePlaceholder(){
         mergePlaceholder(src);
@@ -486,8 +489,7 @@ public class WDocument extends WElement {
     }
 
     /**
-     * 合并标签 开始 结束标签分别合并<br/>
-     * 合并完成后 直接拆分前后缀 head body foot
+     * 合并标签 开始 结束标签分别合并
      * @param box 通常是body, p; table, tr, tc通常不需要 因为其中内容都包含在pk
      */
     public void mergeTag(Element box) {
@@ -664,7 +666,7 @@ public class WDocument extends WElement {
                 }
                 Element tblGrid = DomUtil.element(table,"tblGrid");
                 if(null == tblGrid){
-                    tblGrid = DocxUtil.element(table, "tblGrid");
+                    tblGrid = DocxUtil.addElement(table, "tblGrid");
                 }
                 List<Element> gridCols = DomUtil.elements(tblGrid, "gridCol");
                 int width = tableWidth / max;
@@ -1277,7 +1279,7 @@ public class WDocument extends WElement {
         boolean remove = td.isRemove(); // 被左侧合并
         if(!remove){
             tc = parent.addElement("w:tc");
-            Element tcPr = DocxUtil.element(tc, "tcPr");
+            Element tcPr = DocxUtil.addElement(tc, "tcPr");
             if(merge > 0){
                 Element vMerge = tcPr.addElement("w:vMerge");//被上一行合并
                 if(merge == 1) {//向下合并
@@ -1312,8 +1314,8 @@ public class WDocument extends WElement {
             pr(parent, styles);
             DocxUtil.after(r, prev);
         }else if(pname.equalsIgnoreCase("tc")){
-            Element p = DocxUtil.element(parent, "p");
-            r = DocxUtil.element(p, "r");
+            Element p = DocxUtil.addElement(parent, "p");
+            r = DocxUtil.addElement(p, "r");
             pr(r, styles);
             DocxUtil.after(r, prev);
         }else if(pname.equalsIgnoreCase("p")){
