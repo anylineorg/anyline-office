@@ -41,46 +41,38 @@ public class Avg extends AbstractTag implements Tag {
         round = 4;
         format = null;
     }
-    public String parse(String text) {
+    public String parse(String text) throws Exception{
         String result = "";
-        try {
-            String key = fetchAttributeValue(text, "data", "d");
-            property = fetchAttributeValue(text, "property", "p");
-            var = fetchAttributeValue(text, "var");
-            distinct = fetchAttributeValue(text, "distinct", "ds");
-            scale = BasicUtil.parseInt(fetchAttributeValue(text, "scale", "s"), scale);
-            round = BasicUtil.parseInt(fetchAttributeValue(text, "round", "r"), round);
+        property = fetchAttributeString(text, "property", "p");
+        var = fetchAttributeString(text, "var");
+        distinct = fetchAttributeString(text, "distinct", "ds");
+        scale = BasicUtil.parseInt(fetchAttributeString(text, "scale", "s"), scale);
+        round = BasicUtil.parseInt(fetchAttributeString(text, "round", "r"), round);
 
-            if(BasicUtil.isEmpty(key)){
-                return "";
+        data = fetchAttributeData(text, "data", "d");
+        if(data instanceof String) {
+            //TODO
+            String[] items = data.toString().split(",");
+        }else if(data instanceof DataSet){
+            BigDecimal avg = null;
+            DataSet set = (DataSet) data;
+            if(BasicUtil.isNotEmpty(distinct)){
+                set = set.distinct(distinct.split(","));
             }
-            data = context.data(key);
-
-            if(data instanceof String) {
-                String[] items = data.toString().split(",");
-            }else if(data instanceof DataSet){
-                BigDecimal avg = null;
-                DataSet set = (DataSet) data;
-                if(BasicUtil.isNotEmpty(distinct)){
-                    set = set.distinct(distinct.split(","));
-                }
-                if(null != property){
-                    avg = set.avg(scale, round, property.split(","));
-                }
-                if(null != avg){
-                    if(null != format){
-                        result = NumberUtil.format(avg, format);
-                    }else{
-                        result = avg.toString();
-                    }
+            if(null != property){
+                avg = set.avg(scale, round, property.split(","));
+            }
+            if(null != avg){
+                if(null != format){
+                    result = NumberUtil.format(avg, format);
+                }else{
+                    result = avg.toString();
                 }
             }
-            if(BasicUtil.isNotEmpty(var)){
-                doc.context().variable(var, result);
-                result = "";
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
+        }
+        if(BasicUtil.isNotEmpty(var)){
+            doc.context().variable(var, result);
+            result = "";
         }
         return result;
     }

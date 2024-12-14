@@ -45,18 +45,17 @@ public class Set extends AbstractTag implements Tag{
     }
     public String parse(String text){
         String html = "";
-        String key = fetchAttributeValue(text, "data", "d");
-        var = fetchAttributeValue(text, "var");
-        selector = fetchAttributeValue(text, "selector","st");
-        distinct = fetchAttributeValue(text, "distinct", "ds");
-        index = BasicUtil.parseInt(fetchAttributeValue(text, "index", "i"), null);
-        begin = BasicUtil.parseInt(fetchAttributeValue(text, "begin", "b"), null);
-        end = BasicUtil.parseInt(fetchAttributeValue(text, "end", "e"), null);
-        qty = BasicUtil.parseInt(fetchAttributeValue(text, "qty", "q"), null);
-        if(BasicUtil.isEmpty(key) || BasicUtil.isEmpty(var)){
+        var = fetchAttributeString(text, "var");
+        selector = fetchAttributeString(text, "selector","st");
+        distinct = fetchAttributeString(text, "distinct", "ds");
+        index = BasicUtil.parseInt(fetchAttributeString(text, "index", "i"), null);
+        begin = BasicUtil.parseInt(fetchAttributeString(text, "begin", "b"), null);
+        end = BasicUtil.parseInt(fetchAttributeString(text, "end", "e"), null);
+        qty = BasicUtil.parseInt(fetchAttributeString(text, "qty", "q"), null);
+        data = fetchAttributeData(text, "data", "d");
+        if(BasicUtil.isEmpty(data) || BasicUtil.isEmpty(var)){
             return "";
         }
-        data = context.data(key);
         if (BasicUtil.isNotEmpty(data)) {
             if(data instanceof Collection) {
                 Collection items = (Collection) data;

@@ -87,30 +87,27 @@ public class CheckBox extends AbstractTag implements Tag {
         if(null == rely) {
             rely = valueKey;
         }
-        data = fetchAttributeValue(text, "data", "d");
-        value = fetchAttributeValue(text, "value", "v");
-        split = fetchAttributeValue(text, "split", "s");
+        data = fetchAttributeData(text, "data", "d");
+        value = fetchAttributeString(text, "value", "v");
+        split = fetchAttributeString(text, "split", "s");
         if(null == split){
             split = "";
         }
         if(BasicUtil.isEmpty(data)){
             return "";
         }
-        type = fetchAttributeValue(text, "type", "t");
-        String vk = fetchAttributeValue(text, "valueKey", "vk");
+        type = fetchAttributeString(text, "type", "t");
+        String vk = fetchAttributeString(text, "valueKey", "vk");
         if(BasicUtil.isNotEmpty(vk)){
             valueKey = vk;
         }
-        String tk = fetchAttributeValue(text, "textKey", "tk");
+        String tk = fetchAttributeString(text, "textKey", "tk");
         if(BasicUtil.isNotEmpty(tk)){
             textKey = tk;
         }
-        vol = BasicUtil.parseInt(fetchAttributeValue(text, "vol"), vol);
+        vol = BasicUtil.parseInt(fetchAttributeString(text, "vol"), vol);
 
         if (null != data) {
-            if (data instanceof String) {
-                data = context.data((String)data);
-            }
             if (data instanceof String) {
                 String items[] = data.toString().split(",");
                 List list = new ArrayList();
@@ -130,9 +127,9 @@ public class CheckBox extends AbstractTag implements Tag {
                 data = list;
             }
             // 选中值
-            if (null != this.value) {
+            if (null != value) {
                 value = context.data(value.toString());
-                if (this.value instanceof Collection) {
+                if (value instanceof Collection) {
                     List list = new ArrayList();
                     Collection cols = (Collection) this.value;
                     for (Object item : cols) {
@@ -142,7 +139,7 @@ public class CheckBox extends AbstractTag implements Tag {
                         }
                         list.add(val);
                     }
-                    this.value = list;
+                    value = list;
                 }
             }
             if(!(data instanceof Collection)){

@@ -29,20 +29,18 @@ public class DateFormat extends AbstractTag implements Tag{
     public String parse(String text) {
         String result = text;
         //<aol:date format="yyyy-MM-dd HH:mm:ss" value="${current_time}"></aol:date>
-        String key = fetchAttributeValue(text, "value", "v");
+
         //空值时 是否取当前时间
-        String evl = fetchAttributeValue(text, "evl", "e");
-        String format = fetchAttributeValue(text, "format", "f");
+        String evl = fetchAttributeString(text, "evl", "e");
+        String format = fetchAttributeString(text, "format", "f");
 
         if(BasicUtil.checkEl(format)){
             format = context.placeholder(format);
         }
 
         Date date = null;
-        Object data = null;
-        if(null != key){
-            data = context.data(key);
-        }else{
+        Object data = fetchAttributeData(text, "value", "v");
+        if(BasicUtil.isEmpty(data)){
             data = body(text, "date");
         }
         if(BasicUtil.isEmpty(data)){

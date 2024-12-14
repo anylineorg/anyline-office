@@ -27,14 +27,15 @@ public class NumberFormat extends AbstractTag implements Tag{
     public String parse(String text) {
         String result = "";
         //<aol:number format="###,##0.00" value="${total}"></aol:number>
-        String key = fetchAttributeValue(text, "value", "v");
-        String format = fetchAttributeValue(text, "format", "f");
-        if(BasicUtil.isEmpty(key) || BasicUtil.isEmpty(format)){
+        String format = fetchAttributeString(text, "format", "f");
+        Object data = fetchAttributeData(text, "value", "v");
+        if(BasicUtil.isEmpty(data)){
             return "";
         }
-        Object data = context.data(key.trim());
-        if(BasicUtil.isNotEmpty(data)) {
+        if(BasicUtil.isNotEmpty(format)) {
             result = NumberUtil.format(data.toString(), format);
+        }else{
+            result = data.toString();
         }
         return result;
     }

@@ -18,6 +18,7 @@ package org.anyline.office.docx.entity;
 
 import org.anyline.adapter.KeyAdapter;
 import org.anyline.entity.DataRow;
+import org.anyline.office.docx.util.DocxUtil;
 import org.anyline.util.BasicUtil;
 import org.anyline.util.BeanUtil;
 import org.anyline.util.regular.RegularUtil;
@@ -31,6 +32,7 @@ public class Context {
      */
     private LinkedHashMap<String, String> htmls = new LinkedHashMap<>();
     private LinkedHashMap<String, String> texts = new LinkedHashMap<>();
+    private String placeholderDefault = "";
     /**
      * 与replaces不同的是values中可以包含复杂结构
      */
@@ -44,6 +46,7 @@ public class Context {
     public LinkedHashMap<String, Object> variables(){
         return variables;
     }
+
 
     /**
      * 设置占位符替换值 在调用save时执行替换<br/>
@@ -103,16 +106,27 @@ public class Context {
         replace(true, key, words);
     }
 
+    public String getPlaceholderDefault() {
+        return placeholderDefault;
+    }
+
+    public void setPlaceholderDefault(String placeholderDefault) {
+        this.placeholderDefault = placeholderDefault;
+    }
+
     public String string(String key){
         Object data = data(key);
+        if(null == data){
+            data = placeholderDefault;
+        }
         if(null != data){
             return data.toString();
         }
         return null;
     }
-    public Object data(String key){
+    public Object data(String key) {
         if(null == key){
-            return "";
+            return null;
         }
         key = key.trim();
         Object data = key;
@@ -165,6 +179,28 @@ public class Context {
                     }
                     if(var.equalsIgnoreCase("uuid")){
                         return UUID.randomUUID().toString();
+                    }
+                }
+            }else{
+                if(key.contains(":")){
+                    key = DocxUtil.tagFormat(key);
+                    String[] ks = key.split(":");
+                    for(String k:ks){
+                        k = k.trim();
+                        if(k.isEmpty()){
+                            continue;
+                        }
+                        //${v1:v2:'abc'}
+                        if(k.startsWith("'") && k.endsWith("'")){
+                            return k.substring(1, k.length()-1);
+                        }
+                        if(k.startsWith("\"") && k.endsWith("\"")){
+                            return k.substring(1, k.length()-1);
+                        }
+                        Object v = data(k);
+                        if(!"".equals(v)){
+                            return v;
+                        }
                     }
                 }
             }
@@ -243,9 +279,6 @@ public class Context {
                 data = list;
             }
         }
-        if(null == data){
-            data = "";
-        }
         return data;
     }
     /**
@@ -307,6 +340,7 @@ public class Context {
         clone.htmls.putAll(htmls);
         clone.texts.putAll(texts);
         clone.variables.putAll(variables);
+        clone.placeholderDefault = placeholderDefault;
         return clone;
     }
 }

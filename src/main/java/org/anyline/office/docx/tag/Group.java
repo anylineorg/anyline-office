@@ -31,13 +31,12 @@ public class Group extends AbstractTag implements Tag{
         by = null;
     }
     public String parse(String text){
-        String key = fetchAttributeValue(text, "data", "d");
-        var = fetchAttributeValue(text, "var");
-        by = fetchAttributeValue(text, "by");
-        if(BasicUtil.isEmpty(key) || BasicUtil.isEmpty(var) || BasicUtil.isEmpty(by)){
+        var = fetchAttributeString(text, "var");
+        by = fetchAttributeString(text, "by");
+        data = fetchAttributeData(text, "data", "d");
+        if(BasicUtil.isEmpty(data) || BasicUtil.isEmpty(var) || BasicUtil.isEmpty(by)){
             return "";
         }
-        data = context.data(key);
         if(data instanceof DataSet){
             DataSet set = (DataSet) data;
             set.group(by.split(","));

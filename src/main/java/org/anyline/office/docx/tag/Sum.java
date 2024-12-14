@@ -53,24 +53,23 @@ public class Sum extends AbstractTag implements Tag{
         scale = null;
         round = null;
     }
-    public String parse(String text){
+    public String parse(String text) throws Exception{
         String html = "";
-        String key = fetchAttributeValue(text, "data", "d");
-        var = fetchAttributeValue(text, "var");
-        selector = fetchAttributeValue(text, "selector", "st");
-        property = fetchAttributeValue(text, "property", "p");
-        format = fetchAttributeValue(text, "format","f");
-        nvl = fetchAttributeValue(text, "nvl", "n");
-        min = fetchAttributeValue(text, "min");
-        max = fetchAttributeValue(text, "max");
-        def = fetchAttributeValue(text, "def");
-        scale = BasicUtil.parseInt(fetchAttributeValue(text, "scale", "s"), null);
-        round = BasicUtil.parseInt(fetchAttributeValue(text, "round", "r"), null);
-        if(BasicUtil.isEmpty(key)){
+        var = fetchAttributeString(text, "var");
+        selector = fetchAttributeString(text, "selector", "st");
+        property = fetchAttributeString(text, "property", "p");
+        format = fetchAttributeString(text, "format","f");
+        nvl = fetchAttributeString(text, "nvl", "n");
+        min = fetchAttributeString(text, "min");
+        max = fetchAttributeString(text, "max");
+        def = fetchAttributeString(text, "def");
+        scale = BasicUtil.parseInt(fetchAttributeString(text, "scale", "s"), null);
+        round = BasicUtil.parseInt(fetchAttributeString(text, "round", "r"), null);
+        data = fetchAttributeData(text, "data", "d");
+        if(BasicUtil.isEmpty(data)){
             return html;
         }
-        data = context.data(key);
-        if(BasicUtil.isEmpty(data)){
+        if(!(data instanceof Collection)){
             return html;
         }
 

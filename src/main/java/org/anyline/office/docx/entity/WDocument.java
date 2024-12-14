@@ -195,6 +195,13 @@ public class WDocument extends WElement {
         }
     }
 
+    public String getPlaceholderDefault() {
+        return context.getPlaceholderDefault();
+    }
+
+    public void setPlaceholderDefault(String placeholderDefault) {
+        context.setPlaceholderDefault(placeholderDefault);
+    }
     /**
      * 设置占位符替换值 在调用save时执行替换<br/>
      * 注意如果不解析的话 不会添加自动${}符号 按原文替换,是替换整个文件的纯文件，包括标签名在内

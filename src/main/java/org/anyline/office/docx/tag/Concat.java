@@ -33,15 +33,12 @@ public class Concat  extends AbstractTag implements Tag{
 	public String parse(String text) {
 		String result = "";
 		try {
-			String key = fetchAttributeValue(text, "data", "d");
-			String property = fetchAttributeValue(text, "property", "p");
-			String var = fetchAttributeValue(text, "var");
-			String distinct = fetchAttributeValue(text, "distinct", "ds");
-			String split = fetchAttributeValue(text, "split", "s");
-			if(BasicUtil.isEmpty(key)){
-				return "";
-			}
-			data = context.data(key);
+			String property = fetchAttributeString(text, "property", "p");
+			String var = fetchAttributeString(text, "var");
+			String distinct = fetchAttributeString(text, "distinct", "ds");
+			String split = fetchAttributeString(text, "split", "s");
+
+			data = fetchAttributeData(text, "data", "d");
 
 			if(data instanceof String) {
 				String[] items = data.toString().split(",");

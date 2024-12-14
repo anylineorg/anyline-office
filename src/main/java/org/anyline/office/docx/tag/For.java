@@ -77,14 +77,8 @@ public class For extends AbstractTag implements Tag {
         StringBuilder html = new StringBuilder();
         //提取最外层标签属性 避免取到下一层属性
         String head = RegularUtil.fetchTagHead(text);
-        String items_key = fetchAttributeValue(head, "items", "is");
-        if(null == items_key){
-            items_key = fetchAttributeValue(head, "data", "d");
-        }
-        if(null != items_key) {
-            items = context.data(items_key);
-        }
-        String scope = fetchAttributeValue(head, "scope", "sp");
+        items = fetchAttributeData("items", "is", "data", "d");
+        String scope = fetchAttributeString(head, "scope", "sp");
 
         String body = RegularUtil.fetchTagBody(text, "aol:for");
         int type = 0; //0:txt 1:tc 2:tr
@@ -158,12 +152,12 @@ public class For extends AbstractTag implements Tag {
                 wtable = WTable.table(table);
             }
         }
-        var = fetchAttributeValue(head, "var");
-        status = fetchAttributeValue(head, "status", "s");
-        begin = BasicUtil.parseInt(fetchAttributeValue(head, "begin", "b"), 0);
-        end = BasicUtil.parseInt(fetchAttributeValue(head, "end", "e"), null);
+        var = fetchAttributeString(head, "var");
+        status = fetchAttributeString(head, "status", "s");
+        begin = BasicUtil.parseInt(fetchAttributeString(head, "begin", "b"), 0);
+        end = BasicUtil.parseInt(fetchAttributeString(head, "end", "e"), null);
         WTable prevTable = wtable;
-        if(null != items) {//遍历集合
+        if(BasicUtil.isNotEmpty(items)) {//遍历集合
             if(items instanceof String){
                 String str = (String) items;
                 if(str.startsWith("[")){

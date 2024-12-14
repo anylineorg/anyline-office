@@ -16,8 +16,11 @@
 
 package org.anyline.office.docx.tag;
 
+import org.anyline.log.Log;
+import org.anyline.log.LogProxy;
 import org.anyline.office.docx.entity.Context;
 import org.anyline.office.docx.entity.WDocument;
+import org.anyline.util.BasicUtil;
 import org.anyline.util.BeanUtil;
 import org.anyline.util.regular.RegularUtil;
 import org.dom4j.Element;
@@ -28,6 +31,7 @@ import java.util.List;
 import java.util.Map;
 
 public abstract class AbstractTag implements Tag {
+    protected static Log log = LogProxy.get(AbstractTag.class);
     protected List<Tag> children = new ArrayList<>();
     protected WDocument doc;
     protected List<Element> tops = new ArrayList<>();
@@ -125,13 +129,35 @@ public abstract class AbstractTag implements Tag {
     public String parse(String text) throws Exception {
         return text;
     }
-    protected String fetchAttributeValue(String text, String ... attributes){
+    protected String fetchAttributeString(String text, String ... attributes){
         for(String attribute:attributes){
             String value = RegularUtil.fetchAttributeValue(text, attribute);
             if(null == value && null != ref){
                 value = RegularUtil.fetchAttributeValue(ref, attribute);
             }
-            if(null != attribute){
+            if(null != value){
+                if(BasicUtil.checkEl(value)){
+                    value = value.substring(2, value.length()-1);
+                    value = context.string(value);
+                }
+                return value;
+            }
+        }
+        return null;
+    }
+    protected Object fetchAttributeData(String text, String ... attributes){
+        for(String attribute:attributes){
+            String value = RegularUtil.fetchAttributeValue(text, attribute);
+            if(null == value && null != ref){
+                value = RegularUtil.fetchAttributeValue(ref, attribute);
+            }
+            if(null != value){
+                if(BasicUtil.checkEl(value)){
+                    Object data = context.data(value);
+                    if(null != data){
+                        return data;
+                    }
+                }
                 return value;
             }
         }

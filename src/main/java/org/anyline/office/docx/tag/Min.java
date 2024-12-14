@@ -29,11 +29,10 @@ public class Min extends AbstractTag implements Tag{
     public String parse(String text) throws Exception{
         String html = "";
         String head = RegularUtil.fetchTagHead(text);
-        String items_key = fetchAttributeValue(head, "items", "data", "d", "is");
-        String property = fetchAttributeValue(head, "property", "p");
-        String var = fetchAttributeValue(head, "var", "v");
-        Object data = context.data(items_key);
-        if(null != data){
+        String property = fetchAttributeString(head, "property", "p");
+        String var = fetchAttributeString(head, "var", "v");
+        Object data = fetchAttributeData(head, "items", "data", "d", "is");
+        if(BasicUtil.isNotEmpty(data)){
             if(data instanceof DataSet){
                 DataSet set = (DataSet)data;
                 DataRow min = set.min(property);
