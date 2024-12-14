@@ -34,7 +34,10 @@ public class If extends AbstractTag implements Tag {
     public String parse(String text) throws Exception{
         String html = "";
         String head = RegularUtil.fetchTagHead(text);
-        String test = fetchAttributeString(head, "test", "t");
+        String test = RegularUtil.fetchAttributeValue(text, "test");
+        if(BasicUtil.isEmpty(test)){
+            test = RegularUtil.fetchAttributeValue(text, "t");
+        }
         String value = fetchAttributeString(head, "value", "v");
         String var = fetchAttributeString(head, "var");
         //false时是否删除

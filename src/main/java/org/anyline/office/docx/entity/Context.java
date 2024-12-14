@@ -129,18 +129,18 @@ public class Context {
             return null;
         }
         key = key.trim();
-        Object data = key;
+        Object data = null;
         if(BasicUtil.checkEl(key)){
             /**
-             * 当前时间 ${ao:now}
-             * 随机8位字符${ao:random:8} ${ao:string:8}
-             * 随机8位数字${ao:number:8}
-             * 随机10-100数字${ao:number:10:100}
-             * UUID  ${ao:uuid}
+             * 当前时间 ${aov:now}
+             * 随机8位字符${aov:random:8} ${aov:string:8}
+             * 随机8位数字${aov:number:8}
+             * 随机10-100数字${aov:number:10:100}
+             * UUID  ${aov:uuid}
              */
             //${users}
             key = key.substring(2, key.length() - 1);
-            if(key.startsWith("ao:")){
+            if(key.startsWith("aov:")){
                 //内置常量
                 String[] tmps = key.split(":");
                 if(tmps.length > 1){
@@ -185,20 +185,29 @@ public class Context {
                 if(key.contains(":")){
                     key = DocxUtil.tagFormat(key);
                     String[] ks = key.split(":");
-                    for(String k:ks){
+                    int len = ks.length;
+                    for(int idx = 0; idx <len; idx ++){
+                        String k = ks[idx];
                         k = k.trim();
                         if(k.isEmpty()){
                             continue;
                         }
-                        //${v1:v2:'abc'}
-                        if(k.startsWith("'") && k.endsWith("'")){
-                            return k.substring(1, k.length()-1);
-                        }
-                        if(k.startsWith("\"") && k.endsWith("\"")){
-                            return k.substring(1, k.length()-1);
+                        if(idx == len -1) {
+                            //最后一位默认值
+                            //${v1:v2:'abc'}
+                            //${v1:v2:123}
+                            if (k.startsWith("'") && k.endsWith("'")) {
+                                return k.substring(1, k.length() - 1);
+                            }
+                            if (k.startsWith("\"") && k.endsWith("\"")) {
+                                return k.substring(1, k.length() - 1);
+                            }
+                            if(BasicUtil.isNumber(k)){
+                                return k;
+                            }
                         }
                         Object v = data(k);
-                        if(!"".equals(v)){
+                        if(null != v){
                             return v;
                         }
                     }
