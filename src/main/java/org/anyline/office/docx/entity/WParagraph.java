@@ -21,6 +21,7 @@ package org.anyline.office.docx.entity;
 
 import org.anyline.handler.Uploader;
 import org.anyline.office.docx.util.DocxUtil;
+import org.anyline.office.docx.util.StyleUtil;
 import org.anyline.util.BasicUtil;
 import org.dom4j.Element;
 
@@ -60,7 +61,7 @@ public class WParagraph extends WElement {
         for(WRun wr:wrs){
             wr.setFont(size, eastAsia, ascii, hint);
         }
-        int pt = DocxUtil.fontSize(size);
+        int pt = StyleUtil.fontSize(size);
         Element pr = DocxUtil.element(src, "pPr");
         DocxUtil.element(pr, "sz","val", pt+"");
         DocxUtil.element(pr, "rFonts","eastAsia", eastAsia);
@@ -73,7 +74,7 @@ public class WParagraph extends WElement {
         for(WRun wr:wrs){
             wr.setFontSize(size);
         }
-        int pt = DocxUtil.fontSize(size);
+        int pt = StyleUtil.fontSize(size);
         Element pr = DocxUtil.element(src, "pPr");
         DocxUtil.element(pr, "sz","val", pt+"");
         return this;

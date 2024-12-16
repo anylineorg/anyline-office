@@ -26,9 +26,12 @@ import org.anyline.handler.Downloader;
 import org.anyline.handler.Uploader;
 import org.anyline.log.Log;
 import org.anyline.log.LogProxy;
-import org.anyline.office.docx.tag.Set;
-import org.anyline.office.docx.tag.*;
 import org.anyline.office.docx.util.DocxUtil;
+import org.anyline.office.docx.util.StyleUtil;
+import org.anyline.office.tag.Set;
+import org.anyline.office.tag.*;
+import org.anyline.office.util.Context;
+import org.anyline.office.util.TagUtil;
 import org.anyline.util.*;
 import org.anyline.util.regular.RegularUtil;
 import org.dom4j.Document;
@@ -440,7 +443,7 @@ public class WDocument extends WElement {
      * 替换占位符前 先解析标签
      */
     public void parseTag(){
-        DocxUtil.parseTag(this,  src, context);
+        TagUtil.parse(this,  src, context);
     }
     public String ref(String id){
         return predefines.get(id);
@@ -461,7 +464,7 @@ public class WDocument extends WElement {
                 List<Element> items = new ArrayList<>();
                 items.add(t);
                 if(!RegularUtil.isFullTag(txt)){//如果不是完整标签 继续拼接下一个直到完成或失败
-                    items = DocxUtil.tagNext(txt, ts, i+1);
+                    items = TagUtil.next(txt, ts, i+1);
                     if(!items.isEmpty()) {
                         txt = t.getText() + DocxUtil.text(items);
                         Element last = items.get(items.size() - 1);
@@ -475,7 +478,7 @@ public class WDocument extends WElement {
                     for(String tag:tags){
                         //<aol:pre id="a"/>
                         //<aol:date pre="b"/>
-                        tag = DocxUtil.tagFormat(tag).trim();
+                        tag = TagUtil.format(tag).trim();
                         String pre = RegularUtil.fetchAttributeValue(tag, "pre");
                         String name = RegularUtil.cut("aol:", " ");
                         if(null == name){
@@ -524,11 +527,11 @@ public class WDocument extends WElement {
             return;
         }
         if (box.getName().equals("p")) {
-            DocxUtil.mergeTag(box);
+            TagUtil.merge(box);
         } else {
             List<Element> ps = DomUtil.elements(box, "p");
             for (Element p : ps) {
-                DocxUtil.mergeTag(p);
+                TagUtil.merge(p);
             }
         }
     }
@@ -649,6 +652,11 @@ public class WDocument extends WElement {
         List<Element> bookmarks = DomUtil.elements(box, "bookmarkStart");
         for(Element bookmark:bookmarks){
             replaceBookmark(bookmark, context);
+        }
+    }
+    public void replace(List<Element> box, Context context){
+        for(Element item:box){
+            replace(item, context);
         }
     }
 
@@ -1340,7 +1348,7 @@ public class WDocument extends WElement {
             // 复制前一个w 的样式
             if(copyPrevStyle && null != prev){
                 Element prevR = prevStyle(prev);
-                DocxUtil.copyStyle(r, prevR, true);
+                StyleUtil.copy(r, prevR, true);
             }
             DocxUtil.after(r, prev);
         }else if(pname.equalsIgnoreCase("body")){
@@ -2018,13 +2026,6 @@ public class WDocument extends WElement {
 
         result = StyleParser.parse(result, element.attributeValue("style"),true);
         return result;
-    }
-    /**
-     * 根据关键字查找样式列表ID
-     * @return List
-     */
-    public String listStyle(String key){
-        return DocxUtil.listStyle(file, key, charset);
     }
 
     /**

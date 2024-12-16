@@ -20,6 +20,7 @@
 package org.anyline.office.docx.entity;
 import org.anyline.handler.Uploader;
 import org.anyline.office.docx.util.DocxUtil;
+import org.anyline.office.docx.util.StyleUtil;
 import org.anyline.util.BasicUtil;
 import org.anyline.util.BeanUtil;
 import org.anyline.util.HtmlUtil;
@@ -64,7 +65,7 @@ public class WRun extends WElement {
      * @return Wr
      */
     public WRun setFont(String size, String eastAsia, String ascii, String hint){
-        int pt = DocxUtil.fontSize(size);
+        int pt = StyleUtil.fontSize(size);
         Element pr = DocxUtil.element(src, "rPr");
         DocxUtil.element(pr, "sz","val", pt+"");
         DocxUtil.element(pr, "rFonts","eastAsia", eastAsia);
@@ -80,7 +81,7 @@ public class WRun extends WElement {
      * @return Wr
      */
     public WRun setFontSize(String size){
-        int pt = DocxUtil.fontSize(size);
+        int pt = StyleUtil.fontSize(size);
         Element pr = DocxUtil.element(src, "rPr");
         DocxUtil.element(pr, "sz","val", pt+"");
         return this;
