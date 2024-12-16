@@ -14,12 +14,14 @@
  * limitations under the License.
  */
 
-package org.anyline.office.docx.tag;
+package org.anyline.office.tag;
 
 import org.anyline.log.Log;
 import org.anyline.log.LogProxy;
-import org.anyline.office.docx.entity.Context;
 import org.anyline.office.docx.entity.WDocument;
+import org.anyline.office.docx.util.DocxUtil;
+import org.anyline.office.util.Context;
+import org.anyline.office.util.TagUtil;
 import org.anyline.util.BasicUtil;
 import org.anyline.util.BeanUtil;
 import org.anyline.util.regular.RegularUtil;
@@ -32,19 +34,62 @@ import java.util.Map;
 
 public abstract class AbstractTag implements Tag {
     protected static Log log = LogProxy.get(AbstractTag.class);
+    protected Config config;
     protected List<Tag> children = new ArrayList<>();
     protected WDocument doc;
-    protected List<Element> tops = new ArrayList<>();
-    protected List<Element> wts = new ArrayList<>();
+    protected List<Element> tops = new ArrayList<>(); // 标签所在顶层p或table(包括head body foot)
+    protected List<Element> inners = new ArrayList<>();
+    protected List<Element> ts = new ArrayList<>();
     protected Context context = new Context();
+    protected String text;
     protected String ref;
 
     public void init(WDocument doc) {
         this.doc = doc;
         this.context = doc.context().clone();
     }
+    public void prepare(){
+        String name = TagUtil.name(text, "aol:");
+        String head = RegularUtil.fetchTagHead(text);
+        String foot = "</aol:"+name+">";
+        if(head.endsWith("/>")){
+            foot = null;
+        }
+        //标签起止top
+        Element first_top = tops.get(0);
+        Element last_top = tops.get(tops.size()-1);
+        //标签起止top 文本
+        String first_top_text = DocxUtil.text(first_top);
+        String last_top_text = DocxUtil.text(last_top);
+
+        //定位标签体所在的tops
+        int body_top_first_index = 0;
+        int body_top_last_index = tops.size()-1;
+        if(first_top_text.trim().endsWith(head)){
+            //以标签头结尾 标签体在下一个top
+            body_top_first_index = 1;
+        }
+        if(null != foot && last_top_text.trim().startsWith(foot)){
+            //以标签必尾开头 标签体截止到上一个top
+            body_top_last_index = body_top_last_index -1 ;
+        }
+        //标签体所在tops
+        for(int i=body_top_first_index; i <= body_top_last_index; i++){
+            inners.add(tops.get(i));
+        }
+
+    }
+
+    public Config config() {
+        return config;
+    }
+
+    public void config(Config config) {
+        this.config = config;
+    }
+
     public void release(){
-        wts.clear();
+        ts.clear();
         children.clear();
         context = new Context();
     }
@@ -72,11 +117,11 @@ public abstract class AbstractTag implements Tag {
     }
 
     public void wts(List<Element> wts) {
-        this.wts = wts;
+        this.ts = wts;
     }
 
     public List<Element> wts() {
-        return wts;
+        return ts;
     }
 
     /**
@@ -126,7 +171,7 @@ public abstract class AbstractTag implements Tag {
     }
 
 
-    public String parse(String text) throws Exception {
+    public String run() throws Exception {
         return text;
     }
     protected String fetchAttributeString(String text, String ... attributes){
@@ -177,5 +222,11 @@ public abstract class AbstractTag implements Tag {
             e.printStackTrace();
         }
         return body;
+    }
+    public String text(){
+        return text;
+    }
+    public void text(String text){
+        this.text = text;
     }
 }

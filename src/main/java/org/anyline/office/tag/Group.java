@@ -14,32 +14,35 @@
  * limitations under the License.
  */
 
-package org.anyline.office.docx.tag;
+package org.anyline.office.tag;
 
+import org.anyline.entity.DataSet;
 import org.anyline.util.BasicUtil;
-import org.anyline.util.MoneyUtil;
 
-public class MoneyFormat extends AbstractTag implements Tag{
+public class Group extends AbstractTag implements Tag{
+    private String var;
+    private Object data;
+    private String by;
+
     public void release(){
         super.release();
+        var = null;
+        data = null;
+        by = null;
     }
-    @Override
-    public String parse(String text) {
-        String result = "";
-        //<aol:money value="${total}"></aol:money>
-        String var = fetchAttributeString(text, "var");
-        Object data = fetchAttributeData(text, "value", "v");
-        if(BasicUtil.isEmpty(data)){
+    public String run(){
+        var = fetchAttributeString(text, "var");
+        by = fetchAttributeString(text, "by");
+        data = fetchAttributeData(text, "data", "d");
+        if(BasicUtil.isEmpty(data) || BasicUtil.isEmpty(var) || BasicUtil.isEmpty(by)){
             return "";
         }
-        if(BasicUtil.isNotEmpty(data)) {
-            double d = BasicUtil.parseDouble(data, 0d);
-            result = MoneyUtil.format(d);
-            if(BasicUtil.isNotEmpty(var)){
-                doc.variable(var, result);
-                result = "";
-            }
+        if(data instanceof DataSet){
+            DataSet set = (DataSet) data;
+            set.group(by.split(","));
+            DataSet groups = null;
+            doc.context().variable(var, groups);
         }
-        return result;
+        return "";
     }
 }

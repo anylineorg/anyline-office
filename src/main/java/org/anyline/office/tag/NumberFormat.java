@@ -14,47 +14,29 @@
  * limitations under the License.
  */
 
-package org.anyline.office.docx.tag;
+package org.anyline.office.tag;
 
 import org.anyline.util.BasicUtil;
-import org.anyline.util.DateUtil;
+import org.anyline.util.NumberUtil;
 
-import java.util.Date;
-
-public class DateFormat extends AbstractTag implements Tag{
+public class NumberFormat extends AbstractTag implements Tag{
     public void release(){
         super.release();
     }
     @Override
-    public String parse(String text) {
-        String result = text;
-        //<aol:date format="yyyy-MM-dd HH:mm:ss" value="${current_time}"></aol:date>
-
-        //空值时 是否取当前时间
-        String evl = fetchAttributeString(text, "evl", "e");
+    public String run() {
+        String result = "";
+        //<aol:number format="###,##0.00" value="${total}"></aol:number>
         String format = fetchAttributeString(text, "format", "f");
-
-        if(BasicUtil.checkEl(format)){
-            format = context.placeholder(format);
-        }
-
-        Date date = null;
         Object data = fetchAttributeData(text, "value", "v");
         if(BasicUtil.isEmpty(data)){
-            data = body(text, "date");
-        }
-        if(BasicUtil.isEmpty(data)){
-            if("true".equalsIgnoreCase(evl) || "1".equalsIgnoreCase(evl)){
-                data = new Date();
-            }else {
-                return "";
-            }
-        }
-        date = DateUtil.parse(data);
-        if(null == data){
             return "";
         }
-        result = DateUtil.format(date, format);
+        if(BasicUtil.isNotEmpty(format)) {
+            result = NumberUtil.format(data.toString(), format);
+        }else{
+            result = data.toString();
+        }
         return result;
     }
 }

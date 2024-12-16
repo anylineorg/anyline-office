@@ -14,28 +14,31 @@
  * limitations under the License.
  */
 
-package org.anyline.office.docx.tag;
+package org.anyline.office.tag;
 
 import org.anyline.util.BasicUtil;
-import org.anyline.util.NumberUtil;
+import org.anyline.util.MoneyUtil;
 
-public class NumberFormat extends AbstractTag implements Tag{
+public class MoneyFormat extends AbstractTag implements Tag{
     public void release(){
         super.release();
     }
     @Override
-    public String parse(String text) {
+    public String run() {
         String result = "";
-        //<aol:number format="###,##0.00" value="${total}"></aol:number>
-        String format = fetchAttributeString(text, "format", "f");
+        //<aol:money value="${total}"></aol:money>
+        String var = fetchAttributeString(text, "var");
         Object data = fetchAttributeData(text, "value", "v");
         if(BasicUtil.isEmpty(data)){
             return "";
         }
-        if(BasicUtil.isNotEmpty(format)) {
-            result = NumberUtil.format(data.toString(), format);
-        }else{
-            result = data.toString();
+        if(BasicUtil.isNotEmpty(data)) {
+            double d = BasicUtil.parseDouble(data, 0d);
+            result = MoneyUtil.format(d);
+            if(BasicUtil.isNotEmpty(var)){
+                doc.variable(var, result);
+                result = "";
+            }
         }
         return result;
     }

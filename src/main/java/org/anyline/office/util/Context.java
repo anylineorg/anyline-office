@@ -14,11 +14,10 @@
  * limitations under the License.
  */
 
-package org.anyline.office.docx.entity;
+package org.anyline.office.util;
 
 import org.anyline.adapter.KeyAdapter;
 import org.anyline.entity.DataRow;
-import org.anyline.office.docx.util.DocxUtil;
 import org.anyline.util.BasicUtil;
 import org.anyline.util.BeanUtil;
 import org.anyline.util.regular.RegularUtil;
@@ -183,7 +182,7 @@ public class Context {
                 }
             }else{
                 if(key.contains(":")){
-                    key = DocxUtil.tagFormat(key);
+                    key = TagUtil.format(key);
                     String[] ks = key.split(":");
                     int len = ks.length;
                     for(int idx = 0; idx <len; idx ++){

@@ -1,4 +1,4 @@
-package org.anyline.office.docx.tag;
+package org.anyline.office.tag;
 
 public class Chart extends AbstractTag implements Tag {
     private String type;

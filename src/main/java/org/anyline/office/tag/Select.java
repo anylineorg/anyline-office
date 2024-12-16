@@ -14,17 +14,11 @@
  * limitations under the License.
  */
 
-package org.anyline.office.docx.tag;
+package org.anyline.office.tag;
 
-public class Merge extends AbstractTag implements Tag{
-    private String by;//依赖的其他列,其他列的合并时当前列才合并
-    private String ignores;//忽略合并的值
-    private String scope = "tc"; //合并范围、tr:行内检测 行内多列值相同时合并列  tc:列内检测
+public class Select extends AbstractTag implements Tag{
+
     public void release(){
         super.release();
     }
-    public String parse(String text){
-        return "";
-    }
-
 }

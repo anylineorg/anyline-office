@@ -14,19 +14,24 @@
  * limitations under the License.
  */
 
-package org.anyline.office.docx.tag;
+package org.anyline.office.tag;
 
-import org.anyline.office.docx.entity.Context;
 import org.anyline.office.docx.entity.WDocument;
+import org.anyline.office.util.Context;
 import org.dom4j.Element;
 
 import java.util.List;
 
 public interface Tag {
     void init(WDocument doc);
+
+    /**
+     * parse前准备工作
+     */
+    void prepare();
     void context(Context context);
     Context context();
-    String parse(String text) throws Exception;
+    String run() throws Exception;
     String ref();
     void ref(String ref);
     default Element wt() {
@@ -51,6 +56,8 @@ public interface Tag {
     List<Element> tops();
     void tops(List<Element> tops);
     default void release(){}
+    void text(String text);
+    String text();
 
 
 }

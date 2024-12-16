@@ -14,14 +14,11 @@
  * limitations under the License.
  */
 
-package org.anyline.office.docx.tag;
+package org.anyline.office.tag;
 
-public class Mark extends AbstractTag implements Tag{
+public class Agg extends AbstractTag implements Tag{
 
     public void release(){
         super.release();
-    }
-    public String parse(String text){
-        return text;
     }
 }

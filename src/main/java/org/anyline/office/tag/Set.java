@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.anyline.office.docx.tag;
+package org.anyline.office.tag;
 
 import org.anyline.entity.DataSet;
 import org.anyline.util.BasicUtil;
@@ -43,7 +43,7 @@ public class Set extends AbstractTag implements Tag{
         end = null;
         qty = null;
     }
-    public String parse(String text){
+    public String run(){
         String html = "";
         var = fetchAttributeString(text, "var");
         selector = fetchAttributeString(text, "selector","st");

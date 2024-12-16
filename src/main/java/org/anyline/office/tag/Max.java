@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.anyline.office.docx.tag;
+package org.anyline.office.tag;
 
 import org.anyline.entity.DataRow;
 import org.anyline.entity.DataSet;
@@ -26,7 +26,7 @@ public class Max extends AbstractTag implements Tag{
     public void release(){
         super.release();
     }
-    public String parse(String text) throws Exception{
+    public String run() throws Exception{
         String html = "";
         String head = RegularUtil.fetchTagHead(text);
         String property = fetchAttributeString(head, "property", "p");

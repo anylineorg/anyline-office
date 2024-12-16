@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.anyline.office.docx.tag;
+package org.anyline.office.tag;
 
 import org.anyline.util.BasicUtil;
 import org.anyline.util.BeanUtil;
@@ -78,7 +78,7 @@ public class CheckBox extends AbstractTag implements Tag {
         split = "";
     }
     @Override
-    public String parse(String text) {
+    public String run() {
         StringBuffer html = new StringBuffer();
 
         if(null == rely) {

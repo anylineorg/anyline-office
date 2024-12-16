@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.anyline.office.docx.tag;
+package org.anyline.office.tag;
 
 import org.anyline.entity.DataSet;
 import org.anyline.util.BasicUtil;
@@ -30,7 +30,7 @@ public class Concat  extends AbstractTag implements Tag{
 		data = null;
 		split = ",";
 	}
-	public String parse(String text) {
+	public String run() {
 		String result = "";
 		try {
 			String property = fetchAttributeString(text, "property", "p");

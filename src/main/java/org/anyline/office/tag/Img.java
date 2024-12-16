@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.anyline.office.docx.tag;
+package org.anyline.office.tag;
 
 import org.anyline.util.BasicUtil;
 
@@ -23,7 +23,7 @@ public class Img extends AbstractTag implements Tag{
         super.release();
     }
     @Override
-    public String parse(String text) {
+    public String run() {
         String result = context.placeholder(text);
         //<aol:img src=”${FILE_URL_COL}” style=”width:150px;height:${LOGO_HEIGHT}px;”></aol:img>
         result = result.replace("aol:img", "img");

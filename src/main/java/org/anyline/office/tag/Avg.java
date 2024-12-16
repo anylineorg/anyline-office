@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.anyline.office.docx.tag;
+package org.anyline.office.tag;
 
 import org.anyline.entity.DataSet;
 import org.anyline.util.BasicUtil;
@@ -41,7 +41,7 @@ public class Avg extends AbstractTag implements Tag {
         round = 4;
         format = null;
     }
-    public String parse(String text) throws Exception{
+    public String run() throws Exception{
         String result = "";
         property = fetchAttributeString(text, "property", "p");
         var = fetchAttributeString(text, "var");
