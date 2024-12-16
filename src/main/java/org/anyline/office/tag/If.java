@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.anyline.office.docx.tag;
+package org.anyline.office.tag;
 
 import ognl.Ognl;
 import ognl.OgnlContext;
@@ -22,16 +22,20 @@ import ognl.OgnlException;
 import org.anyline.office.docx.entity.WTable;
 import org.anyline.office.docx.entity.WTr;
 import org.anyline.office.docx.util.DocxUtil;
+import org.anyline.office.util.TagUtil;
 import org.anyline.util.BasicUtil;
 import org.anyline.util.DefaultOgnlMemberAccess;
 import org.anyline.util.regular.RegularUtil;
 import org.dom4j.Element;
 
+/**
+ * 注意以value为主 没有value的再读body
+ */
 public class If extends AbstractTag implements Tag {
     public void release(){
         super.release();
     }
-    public String parse(String text) throws Exception{
+    public String run() throws Exception{
         String html = "";
         String head = RegularUtil.fetchTagHead(text);
         String test = RegularUtil.fetchAttributeValue(text, "test");
@@ -61,6 +65,15 @@ public class If extends AbstractTag implements Tag {
         } catch (OgnlException e) {
             e.printStackTrace();
         }
+        //清空第一个t<if>和最后一个t(</if>)
+        if(ts.size() > 1){
+            DocxUtil.remove(ts.get(ts.size()-1));
+            ts.remove(ts.size()-1);
+        }
+        DocxUtil.remove(ts.get(0));
+        ts.remove(0);
+
+
         if(BasicUtil.isEmpty(var)) {
             if (chk) {
                 if (BasicUtil.isNotEmpty(value)) {
@@ -68,26 +81,30 @@ public class If extends AbstractTag implements Tag {
                     html = value;
                 } else {
                     //test中会有>影响表达式
-                    text = text.replace(test, "");
+                    /*text = text.replace(test, "");
                     String body = RegularUtil.fetchTagBody(text, "aol:if");
                     if (body.contains("<aol:")) {
-                        body = DocxUtil.parseTag(doc, wts, body, context);
+                        body = TagUtil.parse(doc, wts, body, context);
                     }
-                    html = body;
+                    html = body;*/
+                    String body = DocxUtil.text(ts);
+                    TagUtil.parse(doc, ts, body, context);
                 }
             } else {
                 html = elseValue;
                 if (remove) {//删除行或行
                     if ("tc".equalsIgnoreCase(scope) || "td".equalsIgnoreCase(scope)) {
-                        Element tc = DocxUtil.getParent(wts.get(0), "tc");
+                        Element tc = DocxUtil.getParent(ts.get(0), "tc");
                         Element tr = tc.getParent();
                         WTr wtr = WTr.tr(tr);
                         wtr.remove(tc);
                     } else if ("tr".equalsIgnoreCase(scope)) {
-                        Element tr = DocxUtil.getParent(wts.get(0), "tr");
+                        Element tr = DocxUtil.getParent(ts.get(0), "tr");
                         Element table = tr.getParent();
                         WTable wtable = WTable.table(table);
                         wtable.remove(tr);
+                    }else if ("p".equalsIgnoreCase(scope)) {
+
                     }
                 }
             }
