@@ -145,7 +145,7 @@ public class TagUtil {
                     if(!nexts.isEmpty()) {
                         txt = t.getText() + DocxUtil.text(nexts);
                         //removes.addAll(items);
-                        Element last = nexts.get(items.size() - 1);
+                        Element last = nexts.get(nexts.size() - 1);
                         i = ts.indexOf(last);
                         items.addAll(nexts);
                     }else{
@@ -208,9 +208,6 @@ public class TagUtil {
         String html = "";
         if(!isPre) {
             Tag instance = instance(doc, txt);
-            if (null == instance) {
-                log.error("未识别的标签名称:{}", name);
-            }
             if (null != instance) {
                 //复制占位值
                 instance.init(doc);
@@ -255,6 +252,9 @@ public class TagUtil {
 
     public static Tag instance(WDocument doc, String tag){
         Tag instance = null;
+        if(null == tag || !tag.contains("<aol:")){
+            return null;
+        }
         String name = name(tag, "aol:");
         String parse = tag; //解析的标签体
         //先执行外层的 外层需要设置新变量值
@@ -415,4 +415,70 @@ public class TagUtil {
         return text;
     }
 
+    /**
+     * 删除标签及标签体
+     * 第一个top保留标签之前内容
+     * 最后个top保留标签之后内容
+     * @param tops tops
+     */
+    public static void clear(List<Element> tops){
+        int size = tops.size();
+        for(int i=0; i<size; i++){
+            Element element = tops.get(i);
+            if(i == 0){
+                //删除head及之后内容
+                boolean remove = false;
+                List<Element> ts = DocxUtil.contents(element);
+                for(Element t:ts){
+                    String txt = t.getText();
+                    if(txt.startsWith("<aol:")){
+                        log.warn("清空first:{}", txt);
+                        DocxUtil.remove(t);
+                        remove = true;
+                        if(txt.endsWith("</aol:")){
+                            remove = false;
+                        }
+                    }else if(txt.startsWith("</aol:")){
+                        log.warn("清空first:{}", txt);
+                        DocxUtil.remove(t);
+                        remove = false;
+                    }else {
+                        if (remove) {
+                            log.warn("清空first:{}", txt);
+                            DocxUtil.remove(t);
+                        }
+                    }
+                }
+                //如果head之前中没有其他内容 删除整个结点(p)
+                if(DocxUtil.isEmpty(element)){
+                    DocxUtil.remove(element);
+                }
+            }else if(i == size-1){
+                //删除foot及之前内容
+                int remove = -1;
+                List<Element> ts = DocxUtil.contents(element);
+                int len = ts.size();
+                for(int r = 0; r<len; r++){
+                    Element t = ts.get(r);
+                    String txt = t.getText();
+                    if(txt.startsWith("</aol:")){
+                        //找到最后一个</aol
+                        remove = r;
+                    }
+                }
+                for(int r = 0; r<=remove; r++){
+                    log.warn("清空last:{}", DocxUtil.text(ts.get(r)));
+                    DocxUtil.remove(ts.get(r));
+                }
+                //如果foot之后中没有其他内容 删除整个结点(p)
+                if(DocxUtil.isEmpty(element)){
+                    DocxUtil.remove(element);
+                }
+            }else {
+                Element top = tops.get(i);
+                log.warn("清空inner:{}", DocxUtil.text(top));
+                DocxUtil.remove(top);
+            }
+        }
+    }
 }
