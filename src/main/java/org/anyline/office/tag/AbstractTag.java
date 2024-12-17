@@ -19,9 +19,7 @@ package org.anyline.office.tag;
 import org.anyline.log.Log;
 import org.anyline.log.LogProxy;
 import org.anyline.office.docx.entity.WDocument;
-import org.anyline.office.docx.util.DocxUtil;
 import org.anyline.office.util.Context;
-import org.anyline.office.util.TagUtil;
 import org.anyline.util.BasicUtil;
 import org.anyline.util.BeanUtil;
 import org.anyline.util.regular.RegularUtil;
@@ -34,11 +32,9 @@ import java.util.Map;
 
 public abstract class AbstractTag implements Tag {
     protected static Log log = LogProxy.get(AbstractTag.class);
-    protected Config config;
     protected List<Tag> children = new ArrayList<>();
     protected WDocument doc;
     protected List<Element> tops = new ArrayList<>(); // 标签所在顶层p或table(包括head body foot)
-    protected List<Element> inners = new ArrayList<>();
     protected List<Element> ts = new ArrayList<>();
     protected Context context = new Context();
     protected String text;
@@ -49,7 +45,7 @@ public abstract class AbstractTag implements Tag {
         this.context = doc.context().clone();
     }
     public void prepare(){
-        String name = TagUtil.name(text, "aol:");
+        /*String name = TagUtil.name(text, "aol:");
         String head = RegularUtil.fetchTagHead(text);
         String foot = "</aol:"+name+">";
         if(head.endsWith("/>")){
@@ -75,17 +71,9 @@ public abstract class AbstractTag implements Tag {
         }
         //标签体所在tops
         for(int i=body_top_first_index; i <= body_top_last_index; i++){
-            inners.add(tops.get(i));
-        }
+            //inners.add(tops.get(i));
+        }*/
 
-    }
-
-    public Config config() {
-        return config;
-    }
-
-    public void config(Config config) {
-        this.config = config;
     }
 
     public void release(){
@@ -229,4 +217,5 @@ public abstract class AbstractTag implements Tag {
     public void text(String text){
         this.text = text;
     }
+
 }
