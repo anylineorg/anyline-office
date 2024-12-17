@@ -26,6 +26,7 @@ import java.io.File;
 import java.util.*;
 
 public class Context {
+    private Context parent = null;
     /**
      * 文本原样替换，不解析原文中的标签,没有${}的也不要添加
      */
@@ -343,12 +344,19 @@ public class Context {
         }
         return result;
     }
+    public Context parent(){
+        return parent;
+    }
+    public void parent(Context parent){
+        this.parent = parent;
+    }
     public Context clone(){
         Context clone = new Context();
         clone.htmls.putAll(htmls);
         clone.texts.putAll(texts);
         clone.variables.putAll(variables);
         clone.placeholderDefault = placeholderDefault;
+        clone.parent = this;
         return clone;
     }
 }
