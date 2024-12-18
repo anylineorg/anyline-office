@@ -31,7 +31,7 @@ public interface Tag {
     void prepare();
     void context(Context context);
     Context context();
-    String run() throws Exception;
+    void run() throws Exception;
     String ref();
     void ref(String ref);
     default Element wt() {

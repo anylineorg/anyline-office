@@ -199,33 +199,6 @@ public class DocxUtil {
         }
     }
 
-    /**
-     * 是否有内容(表格、文本、图片)
-     * @param element element
-     * @return boolean
-     */
-    public static boolean isEmpty(Element element){
-        List<Element> elements = DomUtil.elements(element, "drawing,tbl,t");
-        for(Element item:elements){
-            String name = item.getName();
-            if(name.equalsIgnoreCase("drawing")){
-                return false;
-            }
-
-            if(name.equalsIgnoreCase("tbl")){
-                return false;
-            }
-            if(name.equalsIgnoreCase("t")){
-                if(item.getTextTrim().length() > 0){
-                    return false;
-                }
-            }
-        }
-        if(element.getTextTrim().length() > 0){
-            return false;
-        }
-        return true;
-    }
     private static boolean isEmpty(List<Element> elements){
         for(Element item:elements){
             String name = item.getName();
@@ -275,13 +248,13 @@ public class DocxUtil {
 
     /**
      * wt列表文本合并
-     * @param ts W:t 集合
+     * @param elements 集合
      * @return String
      */
-    public static String text(List<Element> ts){
+    public static String text(List<Element> elements){
         StringBuilder builder = new StringBuilder();
-        for(Element t:ts){
-            String txt = t.getText();
+        for(Element element:elements){
+            String txt = text(element);
             if(null != txt) {
                 builder.append(txt);
             }
@@ -305,7 +278,7 @@ public class DocxUtil {
         Element sp = src.getParent();
         // 同级
         if(rp == sp || null == sp){
-            List<Element> elements = ref.getParent().elements();
+            List<Element> elements = rp.elements();
             int index = elements.indexOf(ref)+1;
             elements.remove(src);
             if(index > elements.size()-1){
@@ -313,6 +286,7 @@ public class DocxUtil {
             }else {
                 elements.add(index, src);
             }
+            src.setParent(rp);
         } else {
             // ref更下级
             after(src, ref.getParent());
@@ -342,7 +316,28 @@ public class DocxUtil {
         if(null == ref || null == src){
             return;
         }
-        List<Element> elements = ref.getParent().elements();
+        if(src == ref){
+            //ref取父标签后可能与src一样
+            return;
+        }
+        Element rp = ref.getParent();
+        Element sp = src.getParent();
+
+        // 同级
+        if(rp == sp || null == sp){
+            List<Element> elements = rp.elements();
+            int index = elements.indexOf(ref);
+            elements.remove(src);
+            elements.add(index, src);
+            src.setParent(rp);
+        } else {
+            // ref更下级
+            before(src, ref.getParent());
+        }
+
+
+        ///////////////
+        /*List<Element> elements = ref.getParent().elements();
         int index = elements.indexOf(ref);
         while (!elements.contains(src)){
             src = src.getParent();
@@ -352,7 +347,7 @@ public class DocxUtil {
         }
         elements.remove(src);
         elements.add(index, src);
-
+*/
     }
     /**
      * 当前节点在上级节点的下标
@@ -417,7 +412,13 @@ public class DocxUtil {
         addAttribute(element, key, value);
         return element;
     }
-
+    public static String attributeValue(Element element, String key){
+        String value = element.attributeValue(key);
+        if(null == value){
+            value = element.attributeValue("w:"+key);
+        }
+        return value;
+    }
     /**
      * 添加属性值，如果属性已存在 先删除原属性
      * @param element Element
@@ -449,7 +450,11 @@ public class DocxUtil {
         return element;
     }
     public static Element addElement(Element parent, String tag){
-        Element element =  parent.addElement("w:"+tag);
+        String name = tag;
+        if(!name.startsWith("w:")){
+            name = "w:" + name;
+        }
+        Element element =  parent.addElement(name);
         return element;
     }
 
@@ -506,11 +511,11 @@ public class DocxUtil {
             int type = node.getNodeType();
             if(type == 3){
                 text += node.getText();
-            }else{
+            }else if(node instanceof Element){
                 text += text((Element)node);
             }
         }
-        return text.trim();
+        return text;
     }
     public static boolean isBlock(String text){
         if(null != text){
@@ -549,7 +554,7 @@ public class DocxUtil {
      * @param box 通常是一个p标签
      */
     public static void mergePlaceholder(Element box){
-        List<Element> items = DomUtil.elements(box, "t,br,bookmarkStart");
+        List<Element> items = contents(box);
         //<w:bookmarkStart w:id="0" w:name="a"/>
         int size = items.size();
         String full = "";
@@ -557,7 +562,7 @@ public class DocxUtil {
         for(int i=0; i<size; i++){
             Element item = items.get(i);
             String name = item.getName();
-            if(name.equals("br") || name.equals("bookmarkStart")){
+            if(name.equals("br") || name.contains("bookmark")){
                 merges.clear();
                 continue;
             }
@@ -619,6 +624,7 @@ public class DocxUtil {
     }
     public static void remove(Element element){
         Element parent = element.getParent();
+        //log.warn("删除:{}", text(element));
         if(null != parent){
             parent.remove(element);
             String pn = parent.getName();
@@ -630,6 +636,42 @@ public class DocxUtil {
         }else{
             log.error("重复删除:{}", element.getText());
         }
+    }
+
+    /**
+     * 是否有内容(表格、文本、图片)
+     * @param element element
+     * @return boolean
+     */
+    public static boolean isEmpty(Element element){
+        List<Element> elements = contents(element);;
+        for(Element item:elements){
+            String name = item.getName();
+            if(name.equalsIgnoreCase("drawing")){
+                return false;
+            }
+            if(name.contains("bookmark")){
+                return false;
+            }
+            if(name.equalsIgnoreCase("br")){
+                return false;
+            }
+            if(name.equalsIgnoreCase("tbl")){
+                return false;
+            }
+            if(name.equalsIgnoreCase("t")){
+                if(item.getText().length() > 0){
+                    return false;
+                }
+            }
+        }
+        if(element.getText().length() > 0){
+            return false;
+        }
+        return true;
+    }
+    public static List<Element> contents(Element element){
+        return DomUtil.elements(element, "drawing,tbl,t,br,bookmarkStart,bookmarkEnd,sectPr");
     }
 
     /**

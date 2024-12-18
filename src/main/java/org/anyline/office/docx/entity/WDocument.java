@@ -219,6 +219,9 @@ public class WDocument extends WElement {
     public Context variable(String key, Object value){
         return context.variable(key, value);
     }
+    public Context variable(Map<String, Object> vars){
+        return context.variable(vars);
+    }
 
     public Context replace(String key, String content){
         return context.replace(key, content);
@@ -582,6 +585,9 @@ public class WDocument extends WElement {
      */
     public void replace(Element box, Context context){
         List<Element> ts = DomUtil.elements(box, "t");
+        if(box.getName().equalsIgnoreCase("t")){
+            ts.add(box);
+        }
         for(Element t:ts){
             String txt = t.getTextTrim();
             if(BasicUtil.isEmpty(txt)){
@@ -612,7 +618,7 @@ public class WDocument extends WElement {
                 boolean all_txt = true;
                 for(String flag:flags){
                     if(BasicUtil.checkEl(flag)) {
-                        String content = context.string(flag);
+                        String content = context.string(false, flag);
                         if(null != content && content.contains("<") && content.contains(">")){
                             all_txt = false;
                             break;
@@ -624,7 +630,7 @@ public class WDocument extends WElement {
                     for(String flag:flags){
                         String content = flag;
                         if (BasicUtil.checkEl(flag)) {
-                            content = context.string(flag);
+                            content = context.string(false, flag);
                         }
                         if(null != content){
                             builder.append(content);
@@ -639,7 +645,7 @@ public class WDocument extends WElement {
                         String flag = flags.get(i);
                         String content = flag;
                         if (BasicUtil.checkEl(flag)) {
-                            content = context.string(flag);
+                            content = context.string(false, flag);
                         }
                         List<Element> list = parseHtml(r, prev, content);
                         if(!list.isEmpty()){
@@ -1038,10 +1044,10 @@ public class WDocument extends WElement {
      * @param context context
      */
     private void replaceBookmark(Element start, Context context){
-        String id = start.attributeValue("id");
-        Element end =  DomUtil.element(getSrc(), "bookmarkEnd","id",id);
-        String name = start.attributeValue("name");
-        String content = context.string(name);
+        String id = DocxUtil.attributeValue(start, "id");
+        Element end =  DomUtil.element(getSrc(), "bookmarkEnd","w:id", id);
+        String name = start.attributeValue("w:name");
+        String content = context.string(false, name);
         if(null == content){
             return;
         }

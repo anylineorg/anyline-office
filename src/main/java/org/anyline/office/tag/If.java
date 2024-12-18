@@ -35,9 +35,7 @@ public class If extends AbstractTag implements Tag {
     public void release(){
         super.release();
     }
-    public String run() throws Exception{
-        String html = "";
-        String head = RegularUtil.fetchTagHead(text);
+    public void run() throws Exception{
         String test = RegularUtil.fetchAttributeValue(text, "test");
         if(BasicUtil.isEmpty(test)){
             test = RegularUtil.fetchAttributeValue(text, "t");
@@ -65,20 +63,22 @@ public class If extends AbstractTag implements Tag {
         } catch (OgnlException e) {
             e.printStackTrace();
         }
-        //清空第一个t<if>和最后一个t(</if>)
-        if(ts.size() > 1){
-            DocxUtil.remove(ts.get(ts.size()-1));
-            ts.remove(ts.size()-1);
+        if(chk){
+            //清空第一个t<if>和最后一个t(</if>) 继续下一层tag
+            if(ts.size() > 1){
+                DocxUtil.remove(ts.get(ts.size()-1));
+                ts.remove(ts.size()-1);
+            }
+            DocxUtil.remove(ts.get(0));
+            ts.remove(0);
         }
-        DocxUtil.remove(ts.get(0));
-        ts.remove(0);
 
 
         if(BasicUtil.isEmpty(var)) {
             if (chk) {
                 if (BasicUtil.isNotEmpty(value)) {
                     //如果有value值
-                    html = value;
+                    output(value);
                 } else {
                     //test中会有>影响表达式
                     /*text = text.replace(test, "");
@@ -87,11 +87,12 @@ public class If extends AbstractTag implements Tag {
                         body = TagUtil.parse(doc, wts, body, context);
                     }
                     html = body;*/
-                    String body = DocxUtil.text(ts);
-                    TagUtil.parse(doc, ts, body, context);
+                    TagUtil.parse(doc, tops, context);
                 }
             } else {
-                html = elseValue;
+                //html = elseValue;
+                //删除body中的tops
+                TagUtil.clear(tops);
                 if (remove) {//删除行或行
                     if ("tc".equalsIgnoreCase(scope) || "td".equalsIgnoreCase(scope)) {
                         Element tc = DocxUtil.getParent(ts.get(0), "tc");
@@ -103,17 +104,13 @@ public class If extends AbstractTag implements Tag {
                         Element table = tr.getParent();
                         WTable wtable = WTable.table(table);
                         wtable.remove(tr);
-                    }else if ("p".equalsIgnoreCase(scope)) {
-
                     }
                 }
             }
         }else{
-            context.variable(var, chk);
+            TagUtil.clear(tops);
+            doc.variable(var, chk);
         }
-        if(null == html){
-            html = "";
-        }
-        return html;
     }
+
 }

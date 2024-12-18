@@ -24,22 +24,17 @@ public class MoneyFormat extends AbstractTag implements Tag{
         super.release();
     }
     @Override
-    public String run() {
-        String result = "";
-        //<aol:money value="${total}"></aol:money>
-        String var = fetchAttributeString(text, "var");
-        Object data = fetchAttributeData(text, "value", "v");
-        if(BasicUtil.isEmpty(data)){
-            return "";
+    public void run() {
+        String result = null;
+
+        Object data = fetchAttributeData(head, "value");
+        if(null == data){
+            data = body(text, "money");
         }
-        if(BasicUtil.isNotEmpty(data)) {
+        if(BasicUtil.isNotEmpty(data)){
             double d = BasicUtil.parseDouble(data, 0d);
             result = MoneyUtil.format(d);
-            if(BasicUtil.isNotEmpty(var)){
-                doc.variable(var, result);
-                result = "";
-            }
         }
-        return result;
+        output(result);
     }
 }

@@ -16,7 +16,6 @@
 
 package org.anyline.office.tag;
 
-import org.anyline.entity.DataSet;
 import org.anyline.util.BasicUtil;
 import org.anyline.util.BeanUtil;
 import org.anyline.util.NumberUtil;
@@ -25,9 +24,6 @@ import java.math.BigDecimal;
 import java.util.Collection;
 
 public class Sum extends AbstractTag implements Tag{
-
-    private String var;
-    private Object data;
     //选择过滤器  ID:1,TYPE:2
     private String selector;
     private String property;
@@ -53,10 +49,8 @@ public class Sum extends AbstractTag implements Tag{
         scale = null;
         round = null;
     }
-    public String run() throws Exception{
-        String html = "";
-        var = fetchAttributeString(text, "var");
-        selector = fetchAttributeString(text, "selector", "st");
+    public void run() throws Exception{
+        String html = null;
         property = fetchAttributeString(text, "property", "p");
         format = fetchAttributeString(text, "format","f");
         nvl = fetchAttributeString(text, "nvl", "n");
@@ -65,71 +59,58 @@ public class Sum extends AbstractTag implements Tag{
         def = fetchAttributeString(text, "def");
         scale = BasicUtil.parseInt(fetchAttributeString(text, "scale", "s"), null);
         round = BasicUtil.parseInt(fetchAttributeString(text, "round", "r"), null);
-        data = fetchAttributeData(text, "data", "d");
-        if(BasicUtil.isEmpty(data)){
-            return html;
-        }
-        if(!(data instanceof Collection)){
-            return html;
-        }
-
-        Collection items = (Collection) data;
-        if(BasicUtil.isNotEmpty(selector) && data instanceof DataSet) {
-            items = BeanUtil.select(items,selector.split(","));
-        }
-
-        BigDecimal sum = new BigDecimal(0);
-        if (null != items) {
-            for (Object item : items) {
-                if(null == item) {
-                    continue;
+        data = data();
+        if(data instanceof Collection){
+            Collection items = (Collection) data;
+            BigDecimal sum = new BigDecimal(0);
+            if (null != items) {
+                for (Object item : items) {
+                    if(null == item) {
+                        continue;
+                    }
+                    Object val = null;
+                    if(item instanceof Number) {
+                        val = item;
+                    }else{
+                        val = BeanUtil.getFieldValue(item, property);
+                    }
+                    if(null != val) {
+                        sum = sum.add(new BigDecimal(val.toString()));
+                    }
                 }
-                Object val = null;
-                if(item instanceof Number) {
-                    val = item;
+
+                if(BasicUtil.isNotEmpty(min)) {
+                    BigDecimal minNum = new BigDecimal(min.toString());
+                    if(minNum.compareTo(sum) > 0) {
+                        sum = minNum;
+                    }
+                }
+                if(BasicUtil.isNotEmpty(max)) {
+                    BigDecimal maxNum = new BigDecimal(max.toString());
+                    if(maxNum.compareTo(sum) < 0) {
+                        sum = maxNum;
+                    }
+                }
+                if(null != scale) {
+                    if(null != round) {
+                        sum = sum.setScale(scale, round);
+                    }else {
+                        sum = sum.setScale(scale);
+                    }
+                }
+                if(BasicUtil.isNotEmpty(format)) {
+                    html = NumberUtil.format(sum,format);
                 }else{
-                    val = BeanUtil.getFieldValue(item, property);
+                    html = sum.toString();
                 }
-                if(null != val) {
-                    sum = sum.add(new BigDecimal(val.toString()));
-                }
-            }
-
-            if(BasicUtil.isNotEmpty(min)) {
-                BigDecimal minNum = new BigDecimal(min.toString());
-                if(minNum.compareTo(sum) > 0) {
-                    sum = minNum;
-                }
-            }
-            if(BasicUtil.isNotEmpty(max)) {
-                BigDecimal maxNum = new BigDecimal(max.toString());
-                if(maxNum.compareTo(sum) < 0) {
-                    sum = maxNum;
-                }
-            }
-            if(null != scale) {
-                if(null != round) {
-                    sum = sum.setScale(scale, round);
-                }else {
-                    sum = sum.setScale(scale);
-                }
-            }
-            if(BasicUtil.isNotEmpty(format)) {
-                html = NumberUtil.format(sum,format);
-            }else{
-                html = sum.toString();
             }
         }
+
 
         if(BasicUtil.isEmpty(html) && BasicUtil.isNotEmpty(nvl)) {
             html = nvl;
         }
-        if(null != var){
-            doc.context().variable(var, html);
-            html = "";
-        }
-
-        return html;
+        output(html);
     }
 
 }

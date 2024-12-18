@@ -17,12 +17,9 @@
 package org.anyline.office.tag;
 
 import org.anyline.entity.DataSet;
-import org.anyline.util.BasicUtil;
-import org.anyline.util.BeanUtil;
 
 public class Concat  extends AbstractTag implements Tag{
 	private static final long serialVersionUID = 1L;
-	private Object data;
 	private String split = ",";
 
 	public void release(){
@@ -30,37 +27,22 @@ public class Concat  extends AbstractTag implements Tag{
 		data = null;
 		split = ",";
 	}
-	public String run() {
+	public void run() {
 		String result = "";
 		try {
-			String property = fetchAttributeString(text, "property", "p");
-			String var = fetchAttributeString(text, "var");
-			String distinct = fetchAttributeString(text, "distinct", "ds");
 			String split = fetchAttributeString(text, "split", "s");
 
-			data = fetchAttributeData(text, "data", "d");
-
-			if(data instanceof String) {
-				String[] items = data.toString().split(",");
-				result = BeanUtil.concat(items, split);
-			}else if(data instanceof DataSet){
+			data = data();
+			if(data instanceof DataSet){
 				DataSet set = (DataSet) data;
-				if(BasicUtil.isNotEmpty(distinct)){
-					set = set.distinct(distinct.split(","));
-				}
 				if(null != property){
 					result = set.concat(property, split);
 				}
-
 			}
-			if(BasicUtil.isNotEmpty(var)){
-				doc.context().variable(var, result);
-				result = "";
-			}
+			output(result);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		return result;
 	}
 
 }

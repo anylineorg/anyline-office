@@ -1,3 +1,19 @@
+/*
+ * Copyright 2006-2023 www.anyline.org
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.anyline.office.util;
 
 import org.anyline.log.Log;
@@ -217,7 +233,7 @@ public class TagUtil {
                 instance.text(txt);
                 //把 aol标签解析成html标签 下一步会解析html标签
                 instance.prepare();
-                html = instance.run();
+                instance.run();
                 //instance.release();
             }
             //txt = txt.replace(tag, html);
@@ -231,6 +247,9 @@ public class TagUtil {
     }
     public static List<Element> tops(WDocument doc, List<Element> ts){
         List<Element> tops = new ArrayList<>();
+        if(ts.isEmpty()){
+            return tops;
+        }
         List<Element> all = doc.getSrc().elements();
         Element t = ts.get(0);
         Element top = DocxUtil.getParent(t, "tbl");
@@ -238,6 +257,9 @@ public class TagUtil {
             top = DocxUtil.getParent(t, "p");
         }
         int fr = all.indexOf(top);
+        if(fr == -1){
+            return tops;
+        }
         t = ts.get(ts.size()-1);
         top = DocxUtil.getParent(t, "tbl");
         if(null == top){

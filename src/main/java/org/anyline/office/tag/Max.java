@@ -19,32 +19,27 @@ package org.anyline.office.tag;
 import org.anyline.entity.DataRow;
 import org.anyline.entity.DataSet;
 import org.anyline.util.BasicUtil;
-import org.anyline.util.regular.RegularUtil;
 
 public class Max extends AbstractTag implements Tag{
 
     public void release(){
         super.release();
     }
-    public String run() throws Exception{
-        String html = "";
-        String head = RegularUtil.fetchTagHead(text);
-        String property = fetchAttributeString(head, "property", "p");
-        String var = fetchAttributeString(head, "var", "v");
-        Object data = fetchAttributeData(head, "items", "data", "d", "is");
-        if(BasicUtil.isNotEmpty(data)){
-            if(data instanceof DataSet){
-                DataSet set = (DataSet)data;
-                DataRow max = set.max(property);
-                if (null != max) {
-                    if(BasicUtil.isEmpty(var)) {
-                        html = max.getString(property);
-                    }else{
-                        context.variable(var, max);
-                    }
+    public void run() throws Exception{
+        Object data = data();
+        Object result = null;
+        if(data instanceof DataSet){
+            DataSet set = (DataSet)data;
+            DataRow max = set.max(property);
+            if (null != max) {
+                if(BasicUtil.isEmpty(var)) {
+                    //直接输出
+                    result = max.getString(property);
+                }else{
+                    result= max;
                 }
             }
         }
-        return html;
+        output(result);
     }
 }

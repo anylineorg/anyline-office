@@ -16,19 +16,20 @@
 
 package org.anyline.office.tag;
 
+import org.anyline.entity.DataSet;
 import org.anyline.log.Log;
 import org.anyline.log.LogProxy;
 import org.anyline.office.docx.entity.WDocument;
+import org.anyline.office.docx.util.DocxUtil;
 import org.anyline.office.util.Context;
 import org.anyline.util.BasicUtil;
 import org.anyline.util.BeanUtil;
+import org.anyline.util.ConfigTable;
 import org.anyline.util.regular.RegularUtil;
 import org.dom4j.Element;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public abstract class AbstractTag implements Tag {
     protected static Log log = LogProxy.get(AbstractTag.class);
@@ -38,15 +39,32 @@ public abstract class AbstractTag implements Tag {
     protected List<Element> ts = new ArrayList<>();
     protected Context context = new Context();
     protected String text;
+    protected String valueKey = ConfigTable.DEFAULT_PRIMARY_KEY;
+    protected String textKey = "NM";
+    protected String var;
     protected String ref;
+    protected Object data;
+    protected String property;
+    protected String head;
 
     public void init(WDocument doc) {
         this.doc = doc;
         this.context = doc.context().clone();
     }
     public void prepare(){
+        head = RegularUtil.fetchTagHead(text);
+        String vk = fetchAttributeString(head, "valueKey", "vk");
+        if(BasicUtil.isNotEmpty(vk)){
+            valueKey = vk;
+        }
+        String tk = fetchAttributeString(text, "textKey", "tk");
+        if(BasicUtil.isNotEmpty(tk)){
+            textKey = tk;
+        }
+
+        var = fetchAttributeString(head, "var");
+        property = fetchAttributeString(head, "property", "p");
         /*String name = TagUtil.name(text, "aol:");
-        String head = RegularUtil.fetchTagHead(text);
         String foot = "</aol:"+name+">";
         if(head.endsWith("/>")){
             foot = null;
@@ -158,10 +176,6 @@ public abstract class AbstractTag implements Tag {
         return replace(true, key, words);
     }
 
-
-    public String run() throws Exception {
-        return text;
-    }
     protected String fetchAttributeString(String text, String ... attributes){
         for(String attribute:attributes){
             String value = RegularUtil.fetchAttributeValue(text, attribute);
@@ -169,9 +183,21 @@ public abstract class AbstractTag implements Tag {
                 value = RegularUtil.fetchAttributeValue(ref, attribute);
             }
             if(null != value){
-                if(BasicUtil.checkEl(value)){
-                    value = value.substring(2, value.length()-1);
-                    value = context.string(value);
+                if(value.contains("${") && value.contains("}")){
+                    List<String> ks = DocxUtil.splitKey(value);
+                    Collections.reverse(ks);
+                    value = "";
+                    for(String k:ks){
+                        if(BasicUtil.checkEl(k)){
+                            String v = context.string(false, k);
+                            if(null == v){
+                                v = "";
+                            }
+                            value += v;
+                        }else{
+                            value += k;
+                        }
+                    }
                 }
                 return value;
             }
@@ -211,11 +237,82 @@ public abstract class AbstractTag implements Tag {
         }
         return body;
     }
+    protected Object data(){
+        Object data = fetchAttributeData(head, "data", "d", "items", "is");
+        if(null == data){
+            return null;
+        }
+        String distinct = fetchAttributeString(head, "distinct", "ds");
+        Integer index = BasicUtil.parseInt(fetchAttributeString(head, "index", "i"), null);
+        Integer begin = BasicUtil.parseInt(fetchAttributeString(head, "begin", "b"), null);
+        Integer end = BasicUtil.parseInt(fetchAttributeString(head, "end", "e"), null);
+        Integer qty = BasicUtil.parseInt(fetchAttributeString(head, "qty", "q"), null);
+        String selector = fetchAttributeString(head, "selector","st");
+
+        if(data instanceof Collection) {
+            Collection items = (Collection) data;
+            if(BasicUtil.isNotEmpty(selector)) {
+                items = BeanUtil.select(items,selector.split(","));
+            }
+            if(index != null) {
+                int i = 0;
+                data = null;
+                for(Object item:items) {
+                    if(index ==i) {
+                        data = item;
+                        break;
+                    }
+                    i ++;
+                }
+            }else{
+                int[] range = BasicUtil.range(begin, end, qty, items.size());
+                if(items instanceof DataSet) {
+                    data = ((DataSet) items).cuts(range[0], range[1]);
+                }else {
+                    data = BeanUtil.cuts(items, range[0], range[1]);
+                }
+            }
+            if(null != distinct && data instanceof Collection) {
+                if(data instanceof DataSet){
+                    DataSet set = (DataSet) data;
+                    data = set.distinct(distinct.split(","));
+                }else{
+                    data = BeanUtil.distinct((Collection) data, distinct.split(","));
+                }
+            }
+        }
+        return data;
+    }
     public String text(){
         return text;
     }
     public void text(String text){
         this.text = text;
+    }
+
+    /**
+     * 输出文本
+     * 输出到第一个t,清空其他t
+     * @param result 输出内容
+     */
+    protected void output(Object result){
+        int size = ts.size();
+        Element t = ts.get(0);
+        if(null == result){
+            result = doc.getPlaceholderDefault();
+        }
+
+        if(BasicUtil.isNotEmpty(var)){
+            doc.variable(var, result);
+            DocxUtil.remove(t);
+        }else{
+            t.setText(result.toString());
+        }
+        if(size > 1) {
+            for (int i = 1; i < size; i++) {
+                DocxUtil.remove(ts.get(i));
+            }
+        }
     }
 
 }

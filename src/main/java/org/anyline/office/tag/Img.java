@@ -23,15 +23,13 @@ public class Img extends AbstractTag implements Tag{
         super.release();
     }
     @Override
-    public String run() {
+    public void run() {
         String result = context.placeholder(text);
         //<aol:img src=”${FILE_URL_COL}” style=”width:150px;height:${LOGO_HEIGHT}px;”></aol:img>
         result = result.replace("aol:img", "img");
         String placeholder = "__"+BasicUtil.getRandomString(16); //__开头的占位符 没有值时中保留原样 有可能是下一步需要处理的
         doc.replace(placeholder, result);
         doc.variable(placeholder, result);
-        //context.replace(placeholder, result);
-        //context.variable(placeholder, result);
-        return "${"+placeholder+"}";
+        output("${"+placeholder+"}");
     }
 }

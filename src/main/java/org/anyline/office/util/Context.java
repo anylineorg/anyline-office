@@ -114,15 +114,18 @@ public class Context {
         this.placeholderDefault = placeholderDefault;
     }
 
-    public String string(String key){
+    public String string(boolean def, String key){
         Object data = data(key);
-        if(null == data){
+        if(null == data && def){
             data = placeholderDefault;
         }
         if(null != data){
             return data.toString();
         }
         return null;
+    }
+    public String string(String key){
+        return string(true, key);
     }
     public Object data(String key) {
         if(null == key){

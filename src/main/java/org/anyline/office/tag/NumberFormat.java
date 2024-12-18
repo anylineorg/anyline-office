@@ -24,19 +24,21 @@ public class NumberFormat extends AbstractTag implements Tag{
         super.release();
     }
     @Override
-    public String run() {
-        String result = "";
+    public void run() {
+        String result = null;
         //<aol:number format="###,##0.00" value="${total}"></aol:number>
-        String format = fetchAttributeString(text, "format", "f");
-        Object data = fetchAttributeData(text, "value", "v");
-        if(BasicUtil.isEmpty(data)){
-            return "";
+        String format = fetchAttributeString(head, "format", "f");
+        Object data = fetchAttributeData(head, "value");
+        if(null == data){
+            data = body(text, "number");
         }
-        if(BasicUtil.isNotEmpty(format)) {
-            result = NumberUtil.format(data.toString(), format);
-        }else{
-            result = data.toString();
+        if(BasicUtil.isNotEmpty(data)){
+            if (BasicUtil.isNotEmpty(format)) {
+                result = NumberUtil.format(data.toString(), format);
+            } else {
+                result = data.toString();
+            }
         }
-        return result;
+        output(result);
     }
 }

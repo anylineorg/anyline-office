@@ -18,6 +18,11 @@ package org.anyline.office.tag;
 
 public class Agg extends AbstractTag implements Tag{
 
+    @Override
+    public void run() throws Exception {
+
+    }
+
     public void release(){
         super.release();
     }

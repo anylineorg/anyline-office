@@ -73,7 +73,7 @@ public class WTc extends WElement {
         List<String> list = new ArrayList<>();
         List<Element> marks = DomUtil.elements(src, "bookmarkStart");
         for(Element mark:marks){
-            list.add(mark.attributeValue("name"));
+            list.add(mark.attributeValue("w:name"));
         }
         return list;
     }
@@ -85,7 +85,7 @@ public class WTc extends WElement {
     public String getBookmark(){
         Element mark = DomUtil.element(src, "bookmarkStart");
         if(null != mark){
-            return mark.attributeValue("name");
+            return mark.attributeValue("w:name");
         }
         return null;
     }
@@ -890,7 +890,7 @@ public class WTc extends WElement {
             //<w:tcW w:w="3436" w:type="dxa"/>
             Element w = pr.element("tcW");
             if(null != w){
-                int width = BasicUtil.parseInt(w.attributeValue("w"), 0);
+                int width = BasicUtil.parseInt(w.attributeValue("w:w"), 0);
                 if(width > 0){
                     styles.put("width", (int)DocxUtil.dxa2px(width)+"px");
                 }

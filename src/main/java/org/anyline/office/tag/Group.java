@@ -20,8 +20,6 @@ import org.anyline.entity.DataSet;
 import org.anyline.util.BasicUtil;
 
 public class Group extends AbstractTag implements Tag{
-    private String var;
-    private Object data;
     private String by;
 
     public void release(){
@@ -30,19 +28,17 @@ public class Group extends AbstractTag implements Tag{
         data = null;
         by = null;
     }
-    public String run(){
-        var = fetchAttributeString(text, "var");
-        by = fetchAttributeString(text, "by");
-        data = fetchAttributeData(text, "data", "d");
-        if(BasicUtil.isEmpty(data) || BasicUtil.isEmpty(var) || BasicUtil.isEmpty(by)){
-            return "";
+    public void run(){
+        var = fetchAttributeString(head, "var");
+        by = fetchAttributeString(head, "by");
+        data = data();
+        DataSet groups = null;
+        if(BasicUtil.isNotEmpty(data) && BasicUtil.isNotEmpty(var) && BasicUtil.isNotEmpty(by)){
+            if(data instanceof DataSet){
+                DataSet set = (DataSet) data;
+                groups = set.group(by.split(","));
+            }
         }
-        if(data instanceof DataSet){
-            DataSet set = (DataSet) data;
-            set.group(by.split(","));
-            DataSet groups = null;
-            doc.context().variable(var, groups);
-        }
-        return "";
+        output(groups);
     }
 }

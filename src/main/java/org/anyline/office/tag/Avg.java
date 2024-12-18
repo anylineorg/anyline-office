@@ -23,10 +23,7 @@ import org.anyline.util.NumberUtil;
 import java.math.BigDecimal;
 
 public class Avg extends AbstractTag implements Tag {
-    private Object data;
     private String property;
-    private String var;
-    private String distinct;
     private int scale = 2;
     private int round = 4;
     private String format;
@@ -36,29 +33,19 @@ public class Avg extends AbstractTag implements Tag {
         property = null;
         data = null;
         var = null;
-        distinct = null;
         scale = 2;
         round = 4;
         format = null;
     }
-    public String run() throws Exception{
-        String result = "";
-        property = fetchAttributeString(text, "property", "p");
-        var = fetchAttributeString(text, "var");
-        distinct = fetchAttributeString(text, "distinct", "ds");
+    public void run() throws Exception{
+        Object result = null;
         scale = BasicUtil.parseInt(fetchAttributeString(text, "scale", "s"), scale);
         round = BasicUtil.parseInt(fetchAttributeString(text, "round", "r"), round);
-
-        data = fetchAttributeData(text, "data", "d");
-        if(data instanceof String) {
-            //TODO
-            String[] items = data.toString().split(",");
-        }else if(data instanceof DataSet){
+        data = data();
+        if(data instanceof DataSet){
             BigDecimal avg = null;
             DataSet set = (DataSet) data;
-            if(BasicUtil.isNotEmpty(distinct)){
-                set = set.distinct(distinct.split(","));
-            }
+
             if(null != property){
                 avg = set.avg(scale, round, property.split(","));
             }
@@ -70,10 +57,6 @@ public class Avg extends AbstractTag implements Tag {
                 }
             }
         }
-        if(BasicUtil.isNotEmpty(var)){
-            doc.context().variable(var, result);
-            result = "";
-        }
-        return result;
+        output(result);
     }
 }

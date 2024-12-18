@@ -23,10 +23,6 @@ import org.anyline.util.ConfigTable;
 import java.util.*;
 
 public class CheckBox extends AbstractTag implements Tag {
-
-    private Object data;
-    private String valueKey = ConfigTable.DEFAULT_PRIMARY_KEY;
-    private String textKey = "NM";
     private String property;
     /**
      * 根据哪个属性判断选中
@@ -78,23 +74,22 @@ public class CheckBox extends AbstractTag implements Tag {
         split = "";
     }
     @Override
-    public String run() {
+    public void run() {
         StringBuffer html = new StringBuffer();
-
         if(null == rely) {
             rely = property;
         }
         if(null == rely) {
             rely = valueKey;
         }
-        data = fetchAttributeData(text, "data", "d");
+        data = data();
         value = fetchAttributeString(text, "value", "v");
         split = fetchAttributeString(text, "split", "s");
         if(null == split){
             split = "";
         }
-        if(BasicUtil.isEmpty(data)){
-            return "";
+        if(null == data){
+            return;
         }
         type = fetchAttributeString(text, "type", "t");
         String vk = fetchAttributeString(text, "valueKey", "vk");
@@ -108,24 +103,6 @@ public class CheckBox extends AbstractTag implements Tag {
         vol = BasicUtil.parseInt(fetchAttributeString(text, "vol"), vol);
 
         if (null != data) {
-            if (data instanceof String) {
-                String items[] = data.toString().split(",");
-                List list = new ArrayList();
-                for (String item : items) {
-                    if(BasicUtil.isEmpty(item)){
-                        continue;
-                    }
-                    Map map = new HashMap();
-                    String ks[] = BeanUtil.parseKeyValue(item);
-                    map.put(valueKey, ks[0]);
-                    map.put(textKey, ks[1]);
-                    if (ks.length > 2) {
-                        map.put("CHK", ks[2]);
-                    }
-                    list.add(map);
-                }
-                data = list;
-            }
             // 选中值
             if (null != value) {
                 value = context.data(value.toString());
@@ -143,7 +120,7 @@ public class CheckBox extends AbstractTag implements Tag {
                 }
             }
             if(!(data instanceof Collection)){
-                return "";
+                return;
             }
             Collection<Map> items = (Collection<Map>) data;
             Collection chks = null;
@@ -225,7 +202,7 @@ public class CheckBox extends AbstractTag implements Tag {
 
         String placeholder = BasicUtil.getRandomString(16);
         doc.replace(placeholder, html.toString());
-        return "${"+placeholder+"}";
+        output("${"+placeholder+"}");
     }
     private boolean checked(Collection<?> chks, Object value) {
         if(null != chks) {

@@ -23,8 +23,8 @@ public class Merge extends AbstractTag implements Tag{
     public void release(){
         super.release();
     }
-    public String run(){
-        return "";
+    public void run(){
+
     }
 
 }
