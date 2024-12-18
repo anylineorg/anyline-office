@@ -61,7 +61,6 @@ public class For extends AbstractTag implements Tag {
      * 务必注意:与普通标签不同的是，有可能需要控制的是外层tc,tr并且可能是连续的多个
      * 因为tc,tr的外层在word中接触不到所以当前标签只能写在td中
      * 通过scope属性指定 td或tc, tr,默认body即for标签体
-     * @return String
      * @throws Exception 异常
      */
     public void run() throws Exception {
