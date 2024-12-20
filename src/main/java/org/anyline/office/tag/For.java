@@ -70,7 +70,6 @@ public class For extends AbstractTag implements Tag {
         */
         StringBuilder html = new StringBuilder();
         //提取最外层标签属性 避免取到下一层属性
-        items = data();
         String scope = fetchAttributeString("scope", "sp");
 
         int type = 0; //0:body 1:tc 2:tr 3:table
@@ -135,9 +134,11 @@ public class For extends AbstractTag implements Tag {
                 wtrs.add(wtr);
             }
         }
+
+        items = data(false);
         var = fetchAttributeString("var");
         status = fetchAttributeString("status", " s");
-        begin = BasicUtil.parseInt(fetchAttributeString("begin", " b"), 0);
+        begin = BasicUtil.parseInt(fetchAttributeString("begin", "start", " b"), 0);
         step = BasicUtil.parseInt(fetchAttributeString("step"), 1);
         end = BasicUtil.parseInt(fetchAttributeString("end", " e"), null);
          if(BasicUtil.isNotEmpty(items)) {//遍历集合
@@ -159,10 +160,20 @@ public class For extends AbstractTag implements Tag {
                     List<Object> list = new ArrayList<>(cols);
                     int size = list.size();
                     int count = 0;
-                    for (int i = 0; i < size; i+= step) {
+                    if(null == end || end > size-1 || end < 0){
+                        end = size-1;
+                    }
+                    if(begin < 0){
+                        begin = 0;
+                    }
+                    if(begin > size-1){
+                        begin = size -1;
+                    }
+                    for (int i = begin; i <= end; i+= step) {
+                        map.clear();
                         count ++;
                         Object item = list.get(i);
-                        if(i<size-2){
+                        if(i<size-1){
                             map.put("next", list.get(i+1));
                         }
                         if(i>0){
@@ -200,10 +211,19 @@ public class For extends AbstractTag implements Tag {
         }else{//按计数遍历
             if(null != end){
                 Map<String, Object> map = new HashMap<>();
-                int index = 0;
+                int count = 0;
                 Context item_context = context.clone();
                 for(int i=begin; i<=end; i+=step){
-                    map.put("index", index);
+                    map.clear();
+                    count++;
+                    map.put("index", i);
+                    map.put("count", count);
+                    if(i<end-1){
+                        map.put("next", i+1);
+                    }
+                    if(i>0){
+                        map.put("prev", i-1);
+                    }
                     item_context.variable(var, i);
                     item_context.variable(status, map);
                     if(type == 1){
@@ -217,7 +237,6 @@ public class For extends AbstractTag implements Tag {
                     } else {
                         body(item_context);
                     }
-                    index++;
                 }
             }
         }

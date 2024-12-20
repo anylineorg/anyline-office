@@ -235,13 +235,22 @@ public abstract class AbstractTag implements Tag {
         return body;
     }
     protected Object data(){
+        return data(true);
+    }
+
+    /**
+     *
+     * @param filter 是否根据begin end过滤
+     * @return Object
+     */
+    protected Object data(boolean filter){
         Object data = fetchAttributeData("data", " d", "items", " is");
         if(null == data){
             return null;
         }
         String distinct = fetchAttributeString("distinct", " ds");
         Integer index = BasicUtil.parseInt(fetchAttributeString("index", " i"), null);
-        Integer begin = BasicUtil.parseInt(fetchAttributeString("begin", " b"), null);
+        Integer begin = BasicUtil.parseInt(fetchAttributeString("begin", "start", " b"), null);
         Integer end = BasicUtil.parseInt(fetchAttributeString("end", " e"), null);
         Integer qty = BasicUtil.parseInt(fetchAttributeString("qty", " q"), null);
         String selector = fetchAttributeString("selector"," st");
@@ -262,11 +271,13 @@ public abstract class AbstractTag implements Tag {
                     i ++;
                 }
             }else{
-                int[] range = BasicUtil.range(begin, end, qty, items.size());
-                if(items instanceof DataSet) {
-                    data = ((DataSet) items).cuts(range[0], range[1]);
-                }else {
-                    data = BeanUtil.cuts(items, range[0], range[1]);
+                if(filter) {
+                    int[] range = BasicUtil.range(begin, end, qty, items.size());
+                    if (items instanceof DataSet) {
+                        data = ((DataSet) items).cuts(range[0], range[1]);
+                    } else {
+                        data = BeanUtil.cuts(items, range[0], range[1]);
+                    }
                 }
             }
             if(null != distinct && data instanceof Collection) {
