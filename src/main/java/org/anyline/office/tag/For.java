@@ -37,6 +37,7 @@ public class For extends AbstractTag implements Tag {
     private String status;
     private Integer begin;
     private Integer end;
+    private Integer step;
     private Element prev;
     public void release(){
         super.release();
@@ -45,6 +46,7 @@ public class For extends AbstractTag implements Tag {
         status = null;
         begin = null;
         end = null;
+        step = null;
     }
 
     /**
@@ -134,9 +136,10 @@ public class For extends AbstractTag implements Tag {
             }
         }
         var = fetchAttributeString("var");
-        status = fetchAttributeString("status", "s");
-        begin = BasicUtil.parseInt(fetchAttributeString("begin", "b"), 0);
-        end = BasicUtil.parseInt(fetchAttributeString("end", "e"), null);
+        status = fetchAttributeString("status", " s");
+        begin = BasicUtil.parseInt(fetchAttributeString("begin", " b"), 0);
+        step = BasicUtil.parseInt(fetchAttributeString("step"), 1);
+        end = BasicUtil.parseInt(fetchAttributeString("end", " e"), null);
          if(BasicUtil.isNotEmpty(items)) {//遍历集合
             if(items instanceof String){
                 String str = (String) items;
@@ -149,30 +152,38 @@ public class For extends AbstractTag implements Tag {
                 }
             }
             if (items instanceof Collection) {
-                Collection list = (Collection) items;
-                if(!list.isEmpty()){
-                    int index = 0;
+                Collection cols = (Collection) items;
+                if(!cols.isEmpty()){
                     Context item_context = context.clone();
                     Map<String, Object> map = new HashMap<>();
-                    int row = 0;
-                    for (Object item : list) {
-                        map.put("index", index);
+                    List<Object> list = new ArrayList<>(cols);
+                    int size = list.size();
+                    int count = 0;
+                    for (int i = 0; i < size; i+= step) {
+                        count ++;
+                        Object item = list.get(i);
+                        if(i<size-2){
+                            map.put("next", list.get(i+1));
+                        }
+                        if(i>0){
+                            map.put("prev", list.get(i-1));
+                        }
+                        map.put("index", i);
+                        map.put("count", count);
                         item_context.variable(var, item);
                         item_context.variable(status, map);
                         if(type == 1){
                             //遍历td
                             //在tr中添加td
-                            tc(tc_index+index*wtcs.size(), wtcs, item_context);
+                            tc(tc_index+count*wtcs.size(), wtcs, item_context);
                         } else if(type == 2){
                             //遍历tr
-                            tr(tr_index+index*wtrs.size(), wtrs, item_context);
+                            tr(tr_index+count*wtrs.size(), wtrs, item_context);
                         } else if(type == 3){
                             table(wtable, item_context);
                         }else{
-                            body(item_context, row);
+                            body(item_context);
                         }
-                        row ++;
-                        index++;
                     }
                     //删除模板列、行、表
                     for(WTc tc: wtcs){
@@ -191,7 +202,7 @@ public class For extends AbstractTag implements Tag {
                 Map<String, Object> map = new HashMap<>();
                 int index = 0;
                 Context item_context = context.clone();
-                for(int i=begin; i<=end; i++){
+                for(int i=begin; i<=end; i+=step){
                     map.put("index", index);
                     item_context.variable(var, i);
                     item_context.variable(status, map);
@@ -204,7 +215,7 @@ public class For extends AbstractTag implements Tag {
                     } else if(type == 3) {
                         table(wtable, item_context);
                     } else {
-                        body(item_context, index);
+                        body(item_context);
                     }
                     index++;
                 }
@@ -294,7 +305,7 @@ public class For extends AbstractTag implements Tag {
         doc.replace(copy, context);
         prev = copy.getSrc();
     }
-    private void body(Context context, int group) {
+    private void body(Context context) {
         List<Element> templates = box.templates();
         int rows = templates.size();
         //复制templates
