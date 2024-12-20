@@ -25,8 +25,8 @@ public class Img extends AbstractTag implements Tag{
     @Override
     public void run() {
         String result = context.placeholder(text);
-        //<aol:img src=”${FILE_URL_COL}” style=”width:150px;height:${LOGO_HEIGHT}px;”></aol:img>
-        result = result.replace("aol:img", "img");
+        //<aot:img src=”${FILE_URL_COL}” style=”width:150px;height:${LOGO_HEIGHT}px;”></aot:img>
+        result = result.replace(doc.namespace() +":img", "img");
         String placeholder = "__"+BasicUtil.getRandomString(16); //__开头的占位符 没有值时中保留原样 有可能是下一步需要处理的
         doc.replace(placeholder, result);
         doc.variable(placeholder, result);

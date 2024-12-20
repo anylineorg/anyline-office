@@ -38,6 +38,6 @@ public class Set extends AbstractTag implements Tag{
             doc.replace(var, "");
             doc.variable(var, null);
         }
-        DocxUtil.remove(ts);
+        DocxUtil.remove(contents);
     }
 }

@@ -75,7 +75,7 @@ public class XElement {
      * @return list
      */
     public List<Element> bookmarks(){
-        List<Element> bookmarks = DomUtil.elements(getSrc(), "bookmarkStart");
+        List<Element> bookmarks = DomUtil.elements(true, getSrc(), "bookmarkStart");
         return bookmarks;
     }
 
@@ -94,7 +94,7 @@ public class XElement {
     public List<Element> placeholders(boolean element, String regex){
         List<Element> list = new ArrayList<>();
         try {
-            List<Element> ts = DomUtil.elements(getSrc(), "t");
+            List<Element> ts = DomUtil.elements(true, getSrc(), "t");
             for(Element t:ts){
                 String txt = t.getTextTrim();
                 List<String> flags = DocxUtil.splitKey(txt, regex);
@@ -117,7 +117,7 @@ public class XElement {
     public List<String> placeholders(String regex){
         List<String> list = new ArrayList<>();
         try {
-            List<Element> ts = DomUtil.elements(getSrc(), "t");
+            List<Element> ts = DomUtil.elements(true, getSrc(), "t");
             for(Element t:ts){
                 String txt = t.getTextTrim();
                 List<String> flags = DocxUtil.splitKey(txt, regex);
@@ -146,7 +146,7 @@ public class XElement {
      */
     public List<String> getTextList(){
         List<String> texts = new ArrayList<>();
-        List<Element> ts = DomUtil.elements(getSrc(), "t");
+        List<Element> ts = DomUtil.elements(true, getSrc(), "t");
         for(Element t:ts){
             texts.add(t.getTextTrim());
         }

@@ -28,17 +28,17 @@ public class DateFormat extends AbstractTag implements Tag{
     @Override
     public void run() {
         String result = null;
-        //<aol:date format="yyyy-MM-dd HH:mm:ss" value="${current_time}"></aol:date>
+        //<aot:date format="yyyy-MM-dd HH:mm:ss" value="${current_time}"></aot:date>
 
         //空值时 是否取当前时间
-        String evl = fetchAttributeString(head, "evl");
-        String format = fetchAttributeString(head, "format", "f");
+        String evl = fetchAttributeString("evl");
+        String format = fetchAttributeString("format", "f");
         Date date = null;
-        Object data = fetchAttributeData(head, "value");
+        Object data = fetchAttributeData("value");
         if(null == data){
             data = body(text, "date");
         }
-        if(BasicUtil.isNotEmpty(data)){
+        if(BasicUtil.isEmpty(data)){
             if("true".equalsIgnoreCase(evl) || "1".equalsIgnoreCase(evl)){
                 data = new Date();
             }else {

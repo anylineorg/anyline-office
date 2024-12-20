@@ -205,6 +205,15 @@ public class WTr extends WElement {
         wtcs.remove(wtc);
         getTcs().remove(wtc.getSrc());
     }
+    public void insert(Integer index, WTc wtc){
+        Element tc = wtc.getSrc();
+        List<Element> tcs = src.elements("tc");
+        tcs.add(index, tc);
+        wtcs.add(index, wtc);
+        if(this.parent.isAutoLoad()) {
+            reload();
+        }
+    }
     public void remove(Element tc){
         remove(tc(tc));
     }

@@ -26,9 +26,9 @@ public class NumberFormat extends AbstractTag implements Tag{
     @Override
     public void run() {
         String result = null;
-        //<aol:number format="###,##0.00" value="${total}"></aol:number>
-        String format = fetchAttributeString(head, "format", "f");
-        Object data = fetchAttributeData(head, "value");
+        //<aot:number format="###,##0.00" value="${total}"></aot:number>
+        String format = fetchAttributeString("format", "f");
+        Object data = fetchAttributeData("value");
         if(null == data){
             data = body(text, "number");
         }

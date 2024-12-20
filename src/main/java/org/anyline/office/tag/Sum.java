@@ -25,8 +25,6 @@ import java.util.Collection;
 
 public class Sum extends AbstractTag implements Tag{
     //选择过滤器  ID:1,TYPE:2
-    private String selector;
-    private String property;
     private String format;
     private String nvl;
     private Object min;
@@ -38,9 +36,6 @@ public class Sum extends AbstractTag implements Tag{
     public void release(){
         super.release();
         var = null;
-        data = null;
-        selector = null;
-        property = null;
         format = null;
         nvl = null;
         min = null;
@@ -51,14 +46,14 @@ public class Sum extends AbstractTag implements Tag{
     }
     public void run() throws Exception{
         String html = null;
-        property = fetchAttributeString(text, "property", "p");
-        format = fetchAttributeString(text, "format","f");
-        nvl = fetchAttributeString(text, "nvl", "n");
-        min = fetchAttributeString(text, "min");
-        max = fetchAttributeString(text, "max");
-        def = fetchAttributeString(text, "def");
-        scale = BasicUtil.parseInt(fetchAttributeString(text, "scale", "s"), null);
-        round = BasicUtil.parseInt(fetchAttributeString(text, "round", "r"), null);
+        property = fetchAttributeString("property", "p");
+        format = fetchAttributeString("format","f");
+        nvl = fetchAttributeString("nvl", "n");
+        min = fetchAttributeString("min");
+        max = fetchAttributeString("max");
+        def = fetchAttributeString("def");
+        scale = BasicUtil.parseInt(fetchAttributeString("scale", "s"), null);
+        round = BasicUtil.parseInt(fetchAttributeString("round", "r"), null);
         data = data();
         if(data instanceof Collection){
             Collection items = (Collection) data;

@@ -236,14 +236,15 @@ public class WTable extends WElement {
 
     public void insert(Integer index, WTr tr){
         List<Element> trs = src.elements("tr");
-        index = index(index, wtrs.size());
-        if(index > 0){
-            wtrs.add(index, tr);
-            trs.add(index, tr.getSrc());
-        }else{
+        int size = wtrs.size();
+        index = index(index, size);
+        if(size == 0 || index >= size-1){
             wtrs.add(tr);
             trs.add(tr.getSrc());
+            return;
         }
+        wtrs.add(index, tr);
+        trs.add(index, tr.getSrc());
     }
     public void add(WTr tr){
         List<Element> trs = src.elements("tr");
@@ -477,6 +478,10 @@ public class WTable extends WElement {
     public void remove(Element tr){
         WTr wtr = tr(tr);
         remove(wtr);
+    }
+
+    public void remove(){
+        src.getParent().remove(src);
     }
 
     /**

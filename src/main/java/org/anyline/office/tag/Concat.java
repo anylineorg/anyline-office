@@ -30,7 +30,7 @@ public class Concat  extends AbstractTag implements Tag{
 	public void run() {
 		String result = "";
 		try {
-			String split = fetchAttributeString(text, "split", "s");
+			String split = fetchAttributeString("split", "s");
 
 			data = data();
 			if(data instanceof DataSet){

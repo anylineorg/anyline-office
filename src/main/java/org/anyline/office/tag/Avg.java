@@ -23,7 +23,6 @@ import org.anyline.util.NumberUtil;
 import java.math.BigDecimal;
 
 public class Avg extends AbstractTag implements Tag {
-    private String property;
     private int scale = 2;
     private int round = 4;
     private String format;
@@ -39,8 +38,8 @@ public class Avg extends AbstractTag implements Tag {
     }
     public void run() throws Exception{
         Object result = null;
-        scale = BasicUtil.parseInt(fetchAttributeString(text, "scale", "s"), scale);
-        round = BasicUtil.parseInt(fetchAttributeString(text, "round", "r"), round);
+        scale = BasicUtil.parseInt(fetchAttributeString("scale", "s"), scale);
+        round = BasicUtil.parseInt(fetchAttributeString("round", "r"), round);
         data = data();
         if(data instanceof DataSet){
             BigDecimal avg = null;

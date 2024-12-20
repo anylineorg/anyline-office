@@ -36,20 +36,17 @@ public class If extends AbstractTag implements Tag {
         super.release();
     }
     public void run() throws Exception{
-        String test = RegularUtil.fetchAttributeValue(text, "test");
-        if(BasicUtil.isEmpty(test)){
-            test = RegularUtil.fetchAttributeValue(text, "t");
-        }
-        String value = fetchAttributeString(head, "value", "v");
-        String var = fetchAttributeString(head, "var");
+        String test = RegularUtil.fetchAttributeValue(box.head().text(), "test");
+        String value = fetchAttributeString("value", "v");
+        String var = fetchAttributeString("var");
         //false时是否删除
-        boolean remove = BasicUtil.parseBoolean(fetchAttributeString(text, "remove", "r"), false);
+        boolean remove = BasicUtil.parseBoolean(fetchAttributeString("remove", "rm"), false);
         //删除的对象 tc/td 或 tr
-        String scope = fetchAttributeString(head, "scope", "s");
+        String scope = fetchAttributeString("scope");
         if(BasicUtil.checkEl(test)){
             test = test.substring(2, test.length()-1);
         }
-        String elseValue = fetchAttributeString(head, "else", "e");
+        String elseValue = fetchAttributeString("else");
         if(null == elseValue){
             elseValue = "";
         }
@@ -61,16 +58,8 @@ public class If extends AbstractTag implements Tag {
                 chk = bol;
             }
         } catch (OgnlException e) {
+            log.error("ognl表达式异常:{}", test);
             e.printStackTrace();
-        }
-        if(chk){
-            //清空第一个t<if>和最后一个t(</if>) 继续下一层tag
-            if(ts.size() > 1){
-                DocxUtil.remove(ts.get(ts.size()-1));
-                ts.remove(ts.size()-1);
-            }
-            DocxUtil.remove(ts.get(0));
-            ts.remove(0);
         }
 
 
@@ -80,27 +69,21 @@ public class If extends AbstractTag implements Tag {
                     //如果有value值
                     output(value);
                 } else {
-                    //test中会有>影响表达式
-                    /*text = text.replace(test, "");
-                    String body = RegularUtil.fetchTagBody(text, "aol:if");
-                    if (body.contains("<aol:")) {
-                        body = TagUtil.parse(doc, wts, body, context);
-                    }
-                    html = body;*/
-                    TagUtil.parse(doc, tops, context);
+                    TagUtil.parse(doc, box.tops(), context);
                 }
             } else {
                 //html = elseValue;
                 //删除body中的tops
-                TagUtil.clear(tops);
+                //TagUtil.clear(doc, tops);
+                box.remove();
                 if (remove) {//删除行或行
                     if ("tc".equalsIgnoreCase(scope) || "td".equalsIgnoreCase(scope)) {
-                        Element tc = DocxUtil.getParent(ts.get(0), "tc");
+                        Element tc = DocxUtil.getParent(contents.get(0), "tc");
                         Element tr = tc.getParent();
                         WTr wtr = WTr.tr(tr);
                         wtr.remove(tc);
                     } else if ("tr".equalsIgnoreCase(scope)) {
-                        Element tr = DocxUtil.getParent(ts.get(0), "tr");
+                        Element tr = DocxUtil.getParent(contents.get(0), "tr");
                         Element table = tr.getParent();
                         WTable wtable = WTable.table(table);
                         wtable.remove(tr);
@@ -108,7 +91,8 @@ public class If extends AbstractTag implements Tag {
                 }
             }
         }else{
-            TagUtil.clear(tops);
+            //TagUtil.clear(doc, tops);
+            box.remove();
             doc.variable(var, chk);
         }
     }

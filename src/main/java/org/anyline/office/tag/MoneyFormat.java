@@ -27,7 +27,7 @@ public class MoneyFormat extends AbstractTag implements Tag{
     public void run() {
         String result = null;
 
-        Object data = fetchAttributeData(head, "value");
+        Object data = fetchAttributeData("value");
         if(null == data){
             data = body(text, "money");
         }

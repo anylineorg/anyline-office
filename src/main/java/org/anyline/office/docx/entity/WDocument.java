@@ -73,6 +73,9 @@ public class WDocument extends WElement {
      */
     private Downloader downloader;
     private int listNum = 0;
+    //标签命名空间<aot:for/>
+    private String namespace = "aol";
+
 
     /**
      * 支持的标签类型
@@ -191,6 +194,15 @@ public class WDocument extends WElement {
             log.error("刷新异常", e);
         }
     }
+
+    public String namespace() {
+        return namespace;
+    }
+
+    public void namespace(String namespace) {
+        this.namespace = namespace;
+    }
+
     public void loadStyle(String html){
         Map<String,Map<String, String>> map = StyleParser.load(html);
         for(String key:map.keySet()){
@@ -296,7 +308,7 @@ public class WDocument extends WElement {
 
     /**
      * 重新组合
-     * 合并拆分到多个t中的占位符(包含表达式)和aol标签
+     * 合并拆分到多个t中的占位符(包含表达式)和aot标签
      * 拆分标签的前后缀 head body foot到单独的t中
      * 拆分不在标签内的占位符到单独的t中
      * @param save 是否保存
@@ -347,7 +359,7 @@ public class WDocument extends WElement {
      * 注意:要在合并之后调用，默认每个t中都是完整的占位符
      */
     private void splitPlaceholder(Element box){
-        List<Element> ts = DomUtil.elements(box, "t");
+        List<Element> ts = DomUtil.elements(true, box, "t");
         for(Element t:ts){
             String text = t.getText();
             List<String> list = splitPlaceholder(text);
@@ -458,7 +470,7 @@ public class WDocument extends WElement {
      * 解析预定义标签
      */
     private void predefine(){
-        List<Element> ts = DomUtil.elements(src, "t");
+        List<Element> ts = DomUtil.elements(true, src, "t");
         int size = ts.size();
         for(int i = 0; i < size; i++){
             Element t = ts.get(i);
@@ -467,7 +479,7 @@ public class WDocument extends WElement {
                 List<Element> items = new ArrayList<>();
                 items.add(t);
                 if(!RegularUtil.isFullTag(txt)){//如果不是完整标签 继续拼接下一个直到完成或失败
-                    items = TagUtil.next(txt, ts, i+1);
+                    items = TagUtil.next(this, txt, ts, i+1);
                     if(!items.isEmpty()) {
                         txt = t.getText() + DocxUtil.text(items);
                         Element last = items.get(items.size() - 1);
@@ -479,13 +491,13 @@ public class WDocument extends WElement {
                 try {
                     List<String> tags = RegularUtil.fetchOutTag(txt);
                     for(String tag:tags){
-                        //<aol:pre id="a"/>
-                        //<aol:date pre="b"/>
+                        //<aot:pre id="a"/>
+                        //<aot:date pre="b"/>
                         tag = TagUtil.format(tag).trim();
                         String pre = RegularUtil.fetchAttributeValue(tag, "pre");
-                        String name = RegularUtil.cut("aol:", " ");
+                        String name = RegularUtil.cut(namespace + ":", " ");
                         if(null == name){
-                            name = RegularUtil.cut("aol:", "/>");
+                            name = RegularUtil.cut(namespace + ":", "/>");
                         }
                         if("pre".equals(name)){
                             pre = RegularUtil.fetchAttributeValue(tag, "id");
@@ -513,7 +525,7 @@ public class WDocument extends WElement {
         if (box.getName().equals("p")) {
             DocxUtil.mergePlaceholder(box);
         } else {
-            List<Element> ps = DomUtil.elements(box, "p");
+            List<Element> ps = DomUtil.elements(true, box, "p");
             for (Element p : ps) {
                 DocxUtil.mergePlaceholder(p);
             }
@@ -530,11 +542,11 @@ public class WDocument extends WElement {
             return;
         }
         if (box.getName().equals("p")) {
-            TagUtil.merge(box);
+            TagUtil.merge(this, box);
         } else {
-            List<Element> ps = DomUtil.elements(box, "p");
+            List<Element> ps = DomUtil.elements(true, box, "p");
             for (Element p : ps) {
-                TagUtil.merge(p);
+                TagUtil.merge(this, p);
             }
         }
     }
@@ -584,7 +596,7 @@ public class WDocument extends WElement {
      * @param context context
      */
     public void replace(Element box, Context context){
-        List<Element> ts = DomUtil.elements(box, "t");
+        List<Element> ts = DomUtil.elements(true, box, "t");
         if(box.getName().equalsIgnoreCase("t")){
             ts.add(box);
         }
@@ -618,7 +630,7 @@ public class WDocument extends WElement {
                 boolean all_txt = true;
                 for(String flag:flags){
                     if(BasicUtil.checkEl(flag)) {
-                        String content = context.string(false, flag);
+                        String content = context.string(flag);
                         if(null != content && content.contains("<") && content.contains(">")){
                             all_txt = false;
                             break;
@@ -630,7 +642,7 @@ public class WDocument extends WElement {
                     for(String flag:flags){
                         String content = flag;
                         if (BasicUtil.checkEl(flag)) {
-                            content = context.string(false, flag);
+                            content = context.string(flag);
                         }
                         if(null != content){
                             builder.append(content);
@@ -645,7 +657,7 @@ public class WDocument extends WElement {
                         String flag = flags.get(i);
                         String content = flag;
                         if (BasicUtil.checkEl(flag)) {
-                            content = context.string(false, flag);
+                            content = context.string(flag);
                         }
                         List<Element> list = parseHtml(r, prev, content);
                         if(!list.isEmpty()){
@@ -655,10 +667,13 @@ public class WDocument extends WElement {
                 }
             }
         }
-        List<Element> bookmarks = DomUtil.elements(box, "bookmarkStart");
+        List<Element> bookmarks = DomUtil.elements(true, box, "bookmarkStart");
         for(Element bookmark:bookmarks){
             replaceBookmark(bookmark, context);
         }
+    }
+    public void replace(WElement box, Context context){
+        replace(box.getSrc(), context);
     }
     public void replace(List<Element> box, Context context){
         for(Element item:box){
@@ -672,14 +687,14 @@ public class WDocument extends WElement {
      *      w:gridCol w:w="1000"
      */
     private void checkMergeCol(){
-        List<Element> tables = DomUtil.elements(doc.getRootElement(), "tbl");
+        List<Element> tables = DomUtil.elements(true, doc.getRootElement(), "tbl");
         for(Element table:tables){
             int max = 0;
             boolean isMerge = false;
-            List<Element> trs = DomUtil.elements(table, "tr");
+            List<Element> trs = DomUtil.elements(true, table, "tr");
             for(Element tr:trs){
                 int size = 0;
-                List<Element> tcs = DomUtil.elements(tr,"tc");
+                List<Element> tcs = DomUtil.elements(true, tr,"tc");
                 for(Element tc:tcs){
                     int colspan = 1;
                     Element pr = DomUtil.element(tc,"tcPr");
@@ -709,7 +724,7 @@ public class WDocument extends WElement {
                 if(null == tblGrid){
                     tblGrid = DocxUtil.element(table, "tblGrid");
                 }
-                List<Element> gridCols = DomUtil.elements(tblGrid, "gridCol");
+                List<Element> gridCols = DomUtil.elements(true, tblGrid, "gridCol");
                 int width = tableWidth / max;
                 for(int i=gridCols.size(); i<max; i++){
                     Element gridCol = tblGrid.addElement("w:gridCol");
@@ -1554,7 +1569,7 @@ public class WDocument extends WElement {
         for(Element element:elements){
             String name = element.getName();
             element.getParent().remove(element);
-            List<Element> exists = DomUtil.elements(parent, name, false);
+            List<Element> exists = DomUtil.elements(true, parent, name, false);
             if(null != exists && exists.size()>0){
                 if(over){
                     DomUtil.remove(parent, exists);
@@ -2045,7 +2060,7 @@ public class WDocument extends WElement {
         WDocument idoc = new WDocument(file);
         idoc.load();
         Element src = idoc.getSrc();
-        List<Element> inserts = DomUtil.elements(src, "p,tbl");
+        List<Element> inserts = DomUtil.elements(true, src, "p,tbl");
         int index = index(src, prev);
         List<Element> elements = src.elements();
         for(Element insert:inserts){

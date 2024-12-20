@@ -34,19 +34,19 @@ public interface Tag {
     void run() throws Exception;
     String ref();
     void ref(String ref);
-    default Element wt() {
-        List<Element> wts = wts();
-        if(wts.isEmpty()){
+    default Element content() {
+        List<Element> contents = contents();
+        if(contents.isEmpty()){
             return null;
         }
-        return wts.get(0);
+        return contents.get(0);
     }
-    default void wt(Element wt) {
-        wts().add(wt);
+    default void content(Element content) {
+        contents().add(content);
     }
 
-    List<Element> wts();
-    void wts(List<Element> wts);
+    List<Element> contents();
+    void contents(List<Element> contents);
 
     /**
      * 标签内的wt所在的顶层p或table
@@ -54,7 +54,6 @@ public interface Tag {
      * @return list
      */
     List<Element> tops();
-    void tops(List<Element> tops);
     default void release(){}
     void text(String text);
     String text();

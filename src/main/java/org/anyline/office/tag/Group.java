@@ -29,8 +29,8 @@ public class Group extends AbstractTag implements Tag{
         by = null;
     }
     public void run(){
-        var = fetchAttributeString(head, "var");
-        by = fetchAttributeString(head, "by");
+        var = fetchAttributeString("var");
+        by = fetchAttributeString("by");
         data = data();
         DataSet groups = null;
         if(BasicUtil.isNotEmpty(data) && BasicUtil.isNotEmpty(var) && BasicUtil.isNotEmpty(by)){

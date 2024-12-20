@@ -22,6 +22,7 @@ import org.anyline.log.LogProxy;
 import org.anyline.office.docx.entity.WDocument;
 import org.anyline.office.docx.util.DocxUtil;
 import org.anyline.office.util.Context;
+import org.anyline.office.util.TagUtil;
 import org.anyline.util.BasicUtil;
 import org.anyline.util.BeanUtil;
 import org.anyline.util.ConfigTable;
@@ -35,8 +36,7 @@ public abstract class AbstractTag implements Tag {
     protected static Log log = LogProxy.get(AbstractTag.class);
     protected List<Tag> children = new ArrayList<>();
     protected WDocument doc;
-    protected List<Element> tops = new ArrayList<>(); // 标签所在顶层p或table(包括head body foot)
-    protected List<Element> ts = new ArrayList<>();
+    protected List<Element> contents = new ArrayList<>();
     protected Context context = new Context();
     protected String text;
     protected String valueKey = ConfigTable.DEFAULT_PRIMARY_KEY;
@@ -45,57 +45,58 @@ public abstract class AbstractTag implements Tag {
     protected String ref;
     protected Object data;
     protected String property;
-    protected String head;
+    protected TagBox box;
 
     public void init(WDocument doc) {
         this.doc = doc;
         this.context = doc.context().clone();
     }
     public void prepare(){
-        head = RegularUtil.fetchTagHead(text);
-        String vk = fetchAttributeString(head, "valueKey", "vk");
+        box = new TagBox(doc);
+        List<Element> tops = TagUtil.tops(doc, contents);
+        TagElement head = new TagElement();
+        Element t0 = contents.get(0);
+        Element t1 = null;
+        head.element(t0);
+        List<Element> head_contents = DocxUtil.contents(tops.get(0));
+        int index = head_contents.indexOf(t0);
+        head.index(index);
+        head.first(index == 0);
+        head.last(index == head_contents.size()-1);
+        head.text(t0.getText());
+        t0.setText("");
+        box.head(head);
+        box.contents(contents);
+        if(this.contents.size() > 0){
+            t1 = this.contents.get(this.contents.size()-1);
+            TagElement foot = new TagElement();
+            foot.element(t1);
+            // foot在top中的下标 注意区分是在首行(中有一行)还是尾行
+            List<Element> foot_contents = DocxUtil.contents(tops.get(tops.size()-1));
+            index = foot_contents.indexOf(t1);
+            foot.index(index);
+            foot.first(index == 0);
+            foot.last(index == foot_contents.size()-1);
+            foot.text(t1.getText());
+            t1.setText("");
+            box.foot(foot);
+        }
+        box.tops(tops);
+        String vk = fetchAttributeString("valueKey", "vk");
         if(BasicUtil.isNotEmpty(vk)){
             valueKey = vk;
         }
-        String tk = fetchAttributeString(text, "textKey", "tk");
+        String tk = fetchAttributeString("textKey", "tk");
         if(BasicUtil.isNotEmpty(tk)){
             textKey = tk;
         }
 
-        var = fetchAttributeString(head, "var");
-        property = fetchAttributeString(head, "property", "p");
-        /*String name = TagUtil.name(text, "aol:");
-        String foot = "</aol:"+name+">";
-        if(head.endsWith("/>")){
-            foot = null;
-        }
-        //标签起止top
-        Element first_top = tops.get(0);
-        Element last_top = tops.get(tops.size()-1);
-        //标签起止top 文本
-        String first_top_text = DocxUtil.text(first_top);
-        String last_top_text = DocxUtil.text(last_top);
-
-        //定位标签体所在的tops
-        int body_top_first_index = 0;
-        int body_top_last_index = tops.size()-1;
-        if(first_top_text.trim().endsWith(head)){
-            //以标签头结尾 标签体在下一个top
-            body_top_first_index = 1;
-        }
-        if(null != foot && last_top_text.trim().startsWith(foot)){
-            //以标签必尾开头 标签体截止到上一个top
-            body_top_last_index = body_top_last_index -1 ;
-        }
-        //标签体所在tops
-        for(int i=body_top_first_index; i <= body_top_last_index; i++){
-            //inners.add(tops.get(i));
-        }*/
-
+        var = fetchAttributeString("var");
+        property = fetchAttributeString("property", "p");
     }
 
     public void release(){
-        ts.clear();
+        contents.clear();
         children.clear();
         context = new Context();
     }
@@ -122,12 +123,12 @@ public abstract class AbstractTag implements Tag {
         context.variable(values);
     }
 
-    public void wts(List<Element> wts) {
-        this.ts = wts;
+    public void contents(List<Element> contents) {
+        this.contents = contents;
     }
 
-    public List<Element> wts() {
-        return ts;
+    public List<Element> contents() {
+        return contents;
     }
 
     /**
@@ -136,10 +137,7 @@ public abstract class AbstractTag implements Tag {
      * @return list
      */
     public List<Element> tops() {
-        return tops;
-    }
-    public void tops(List<Element> tops) {
-        this.tops = tops;
+        return box.tops();
     }
     /**
      * 设置占位符替换值 在调用save时执行替换<br/>
@@ -176,7 +174,8 @@ public abstract class AbstractTag implements Tag {
         return replace(true, key, words);
     }
 
-    protected String fetchAttributeString(String text, String ... attributes){
+    protected String fetchAttributeString(String ... attributes){
+        String text = box.head().text();
         for(String attribute:attributes){
             String value = RegularUtil.fetchAttributeValue(text, attribute);
             if(null == value && null != ref){
@@ -204,7 +203,8 @@ public abstract class AbstractTag implements Tag {
         }
         return null;
     }
-    protected Object fetchAttributeData(String text, String ... attributes){
+    protected Object fetchAttributeData(String ... attributes){
+        String text = box.head().text();
         for(String attribute:attributes){
             String value = RegularUtil.fetchAttributeValue(text, attribute);
             if(null == value && null != ref){
@@ -212,10 +212,7 @@ public abstract class AbstractTag implements Tag {
             }
             if(null != value){
                 if(BasicUtil.checkEl(value)){
-                    Object data = context.data(value);
-                    if(null != data){
-                        return data;
-                    }
+                    return context.data(value);
                 }
                 return value;
             }
@@ -225,11 +222,11 @@ public abstract class AbstractTag implements Tag {
     protected String body(String text, String name){
         String body = null;
         try {
-            body = RegularUtil.fetchTagBody(text, "aol:"+name);
+            body = RegularUtil.fetchTagBody(text, doc.namespace()+":"+name);
             if (null == body && null != ref) {
-                body = RegularUtil.fetchTagBody(ref, "aol:pre");
+                body = RegularUtil.fetchTagBody(ref, doc.namespace()+":pre");
                 if(null == body){
-                    body = RegularUtil.fetchTagBody(ref, "aol:"+name);
+                    body = RegularUtil.fetchTagBody(ref, doc.namespace()+":"+name);
                 }
             }
         }catch (Exception e){
@@ -238,16 +235,16 @@ public abstract class AbstractTag implements Tag {
         return body;
     }
     protected Object data(){
-        Object data = fetchAttributeData(head, "data", "d", "items", "is");
+        Object data = fetchAttributeData("data", " d", "items", " is");
         if(null == data){
             return null;
         }
-        String distinct = fetchAttributeString(head, "distinct", "ds");
-        Integer index = BasicUtil.parseInt(fetchAttributeString(head, "index", "i"), null);
-        Integer begin = BasicUtil.parseInt(fetchAttributeString(head, "begin", "b"), null);
-        Integer end = BasicUtil.parseInt(fetchAttributeString(head, "end", "e"), null);
-        Integer qty = BasicUtil.parseInt(fetchAttributeString(head, "qty", "q"), null);
-        String selector = fetchAttributeString(head, "selector","st");
+        String distinct = fetchAttributeString("distinct", " ds");
+        Integer index = BasicUtil.parseInt(fetchAttributeString("index", " i"), null);
+        Integer begin = BasicUtil.parseInt(fetchAttributeString("begin", " b"), null);
+        Integer end = BasicUtil.parseInt(fetchAttributeString("end", " e"), null);
+        Integer qty = BasicUtil.parseInt(fetchAttributeString("qty", " q"), null);
+        String selector = fetchAttributeString("selector"," st");
 
         if(data instanceof Collection) {
             Collection items = (Collection) data;
@@ -296,8 +293,8 @@ public abstract class AbstractTag implements Tag {
      * @param result 输出内容
      */
     protected void output(Object result){
-        int size = ts.size();
-        Element t = ts.get(0);
+        int size = contents.size();
+        Element t = contents.get(0);
         if(null == result){
             result = doc.getPlaceholderDefault();
         }
@@ -310,7 +307,7 @@ public abstract class AbstractTag implements Tag {
         }
         if(size > 1) {
             for (int i = 1; i < size; i++) {
-                DocxUtil.remove(ts.get(i));
+                DocxUtil.remove(contents.get(i));
             }
         }
     }

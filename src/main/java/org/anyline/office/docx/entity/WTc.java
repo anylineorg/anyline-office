@@ -71,7 +71,7 @@ public class WTc extends WElement {
      */
     public List<String> getBookmarks(){
         List<String> list = new ArrayList<>();
-        List<Element> marks = DomUtil.elements(src, "bookmarkStart");
+        List<Element> marks = DomUtil.elements(true, src, "bookmarkStart");
         for(Element mark:marks){
             list.add(mark.attributeValue("w:name"));
         }

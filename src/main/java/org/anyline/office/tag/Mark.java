@@ -30,18 +30,18 @@ public class Mark extends AbstractTag implements Tag{
         super.release();
     }
     public void run(){
-        Element first = ts.get(0);
-        Element last = ts.get(ts.size()-1);
+        Element first = contents.get(0);
+        Element last = contents.get(contents.size()-1);
         Element parent = first.getParent();
         int max = -1;
-        List<Element> starts = DomUtil.elements(doc.getSrc(), "bookmarkStart");
+        List<Element> starts = DomUtil.elements(true, doc.getSrc(), "bookmarkStart");
         for (Element start : starts){
             String value = start.attributeValue("w:id");
             int id = BasicUtil.parseInt(value, 0);
             max = NumberUtil.max(id, max);
         }
         max ++;
-        String name = fetchAttributeString(head, "name", "n");
+        String name = fetchAttributeString("name", "n");
         Element start = DocxUtil.addElement(parent, "bookmarkStart");
         Element end = DocxUtil.addElement(parent, "bookmarkEnd");
         start.addAttribute("w:id", max+"");

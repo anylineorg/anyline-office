@@ -142,7 +142,7 @@ public class Context {
              * UUID  ${aov:uuid}
              */
             //${users}
-            key = key.substring(2, key.length() - 1);
+            key = key.substring(2, key.length() - 1).trim();
             if(key.startsWith("aov:")){
                 //内置常量
                 String[] tmps = key.split(":");
@@ -250,7 +250,11 @@ public class Context {
                                 }else if("empty".equals(k)){
                                     data = map.isEmpty();
                                 }else{
-                                    data = map.get(k);
+                                    if(data instanceof DataRow){
+                                        data = ((DataRow)data).get(k);
+                                    }else {
+                                        data = map.get(k);
+                                    }
                                 }
                             }else {
                                 if(data instanceof String){

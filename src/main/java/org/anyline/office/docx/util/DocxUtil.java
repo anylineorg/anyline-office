@@ -21,6 +21,7 @@ package org.anyline.office.docx.util;
 
 import org.anyline.log.Log;
 import org.anyline.log.LogProxy;
+import org.anyline.office.docx.entity.WElement;
 import org.anyline.office.util.TagUtil;
 import org.anyline.util.BasicUtil;
 import org.anyline.util.DomUtil;
@@ -44,7 +45,7 @@ public class DocxUtil {
         try {
             String num_xml = ZipUtil.read(docx, "word/document.xml", charset);
             Document document = DocumentHelper.parseText(num_xml);
-            List<Element> ts = DomUtil.elements(document.getRootElement(),"t");
+            List<Element> ts = DomUtil.elements(true, document.getRootElement(),"t");
             for(Element t:ts){
                 if(t.getTextTrim().contains(key)){
                     Element pr = t.getParent().getParent().element("pPr");
@@ -119,7 +120,7 @@ public class DocxUtil {
      */
     public static Element prevByName(Element element){
         Element prev = null;
-        List<Element> elements = DomUtil.elements(top(element), element.getName());
+        List<Element> elements = DomUtil.elements(true, top(element), element.getName());
         int index = elements.indexOf(element);
         if(index > 0){
             prev = elements.get(index -1);
@@ -128,7 +129,7 @@ public class DocxUtil {
     }
     public static Element prevByName(Element parent, Element element){
         Element prev = null;
-        List<Element> elements = DomUtil.elements(parent, element.getName());
+        List<Element> elements = DomUtil.elements(true, parent, element.getName());
         int index = elements.indexOf(element);
         if(index > 0){
             prev = elements.get(index -1);
@@ -137,7 +138,7 @@ public class DocxUtil {
     }
     public static Element nextByName(Element element){
         Element prev = null;
-        List<Element> elements = DomUtil.elements(top(element), element.getName());
+        List<Element> elements = DomUtil.elements(true, top(element), element.getName());
         int index = elements.indexOf(element);
         if(index < elements.size()-1 && index > 0){
             prev = elements.get(index + 1);
@@ -146,7 +147,7 @@ public class DocxUtil {
     }
     public static Element nextByName(Element parent, Element element){
         Element prev = null;
-        List<Element> elements = DomUtil.elements(parent, element.getName());
+        List<Element> elements = DomUtil.elements(true, parent, element.getName());
         int index = elements.indexOf(element);
         if(index < elements.size()-1 && index > 0){
             prev = elements.get(index + 1);
@@ -291,7 +292,16 @@ public class DocxUtil {
             // ref更下级
             after(src, ref.getParent());
         }
+    }
 
+    public static void after(WElement src, Element ref){
+        after(src.getSrc(), ref);
+    }
+    public static void after(WElement src, WElement ref){
+        after(src.getSrc(), ref.getSrc());
+    }
+    public static void after(Element src, WElement ref){
+        after(src, ref.getSrc());
     }
     public static void after(List<Element> srcs, Element ref){
         if(null == ref || null == srcs){
@@ -627,15 +637,12 @@ public class DocxUtil {
         //log.warn("删除:{}", text(element));
         if(null != parent){
             parent.remove(element);
-            String pn = parent.getName();
-            if("r".equalsIgnoreCase(pn)){
-                if(parent.elements("t").isEmpty() && parent.elements("br").isEmpty()){
-                    parent.getParent().remove(parent);
-                }
+            if(DocxUtil.isEmpty(parent)) {
+                remove(parent);
             }
-        }else{
+        }/*else{
             log.error("重复删除:{}", element.getText());
-        }
+        }*/
     }
 
     /**
@@ -671,9 +678,19 @@ public class DocxUtil {
         return true;
     }
     public static List<Element> contents(Element element){
-        return DomUtil.elements(element, "drawing,tbl,t,br,bookmarkStart,bookmarkEnd,sectPr");
+        return DomUtil.elements(true, element, "drawing,tbl,t,br,bookmarkStart,bookmarkEnd,sectPr");
+    }
+    public static List<Element> contents(List<Element> elements){
+        List<Element> list = new ArrayList<>();
+        for(Element element:elements){
+            list.addAll(contents(element));
+        }
+        return list;
     }
 
+    public static List<Element> contents(WElement element){
+        return contents(element.getSrc());
+    }
     /**
      * flag后一个字符
      * @param empty 是否包含空
@@ -969,21 +986,21 @@ public class DocxUtil {
     }
 
     public static void removeContent(Element parent){
-        List<Element> ts = DomUtil.elements(parent,"t");
+        List<Element> ts = DomUtil.elements(true, parent,"t");
         for(Element t:ts){
             t.getParent().remove(t);
         }
-        List<Element> imgs = DomUtil.elements(parent,"drawing");
+        List<Element> imgs = DomUtil.elements(true, parent,"drawing");
         for(Element img:imgs){
             img.getParent().remove(img);
         }
-        List<Element> brs = DomUtil.elements(parent,"br");
+        List<Element> brs = DomUtil.elements(true, parent,"br");
         for(Element br:brs){
             br.getParent().remove(br);
         }
     }
     public static void removeElement(Element parent, String element){
-        List<Element> elements = DomUtil.elements(parent, element);
+        List<Element> elements = DomUtil.elements(true, parent, element);
         for(Element item:elements){
             item.getParent().remove(item);
         }
@@ -995,7 +1012,7 @@ public class DocxUtil {
      * @param replaces replaces
      */
     public static void replace(Element src, Map<String, String> replaces){
-        List<Element> ts = DomUtil.elements(src, "t");
+        List<Element> ts = DomUtil.elements(true, src, "t");
         for(Element t:ts){
             String txt = t.getTextTrim();
             List<String> flags = DocxUtil.splitKey(txt);

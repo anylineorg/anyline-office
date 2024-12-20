@@ -23,7 +23,6 @@ import org.anyline.util.ConfigTable;
 import java.util.*;
 
 public class CheckBox extends AbstractTag implements Tag {
-    private String property;
     /**
      * 根据哪个属性判断选中
      */
@@ -31,7 +30,7 @@ public class CheckBox extends AbstractTag implements Tag {
     /**
      * 默认选项
      */
-    private String head;
+    private String headText;
     private String headValue;
     /**
     * 当前值
@@ -63,7 +62,7 @@ public class CheckBox extends AbstractTag implements Tag {
         textKey = "NM";
         property = null;
         rely = null;
-        head = null;
+        headText = null;
         headValue = null;
         value = null;
         checkedValue = "";
@@ -83,24 +82,24 @@ public class CheckBox extends AbstractTag implements Tag {
             rely = valueKey;
         }
         data = data();
-        value = fetchAttributeString(text, "value", "v");
-        split = fetchAttributeString(text, "split", "s");
+        value = fetchAttributeData("value", "v");
+        split = fetchAttributeString("split", "s");
         if(null == split){
             split = "";
         }
         if(null == data){
             return;
         }
-        type = fetchAttributeString(text, "type", "t");
-        String vk = fetchAttributeString(text, "valueKey", "vk");
+        type = fetchAttributeString("type", "t");
+        String vk = fetchAttributeString("valueKey", "vk");
         if(BasicUtil.isNotEmpty(vk)){
             valueKey = vk;
         }
-        String tk = fetchAttributeString(text, "textKey", "tk");
+        String tk = fetchAttributeString("textKey", "tk");
         if(BasicUtil.isNotEmpty(tk)){
             textKey = tk;
         }
-        vol = BasicUtil.parseInt(fetchAttributeString(text, "vol"), vol);
+        vol = BasicUtil.parseInt(fetchAttributeString("vol"), vol);
 
         if (null != data) {
             // 选中值
@@ -136,7 +135,7 @@ public class CheckBox extends AbstractTag implements Tag {
                 headValue = "";
             }
             int qty = 0;
-            if (null != head) {
+            if (null != headText) {
                 qty ++;
                 if (null != headValue && !"text".equalsIgnoreCase(type)) {
                     if (checked || checkedValue.equals(headValue) || "true".equalsIgnoreCase(headValue) || "checked".equalsIgnoreCase(headValue) || checked(value, headValue)) {
@@ -146,7 +145,7 @@ public class CheckBox extends AbstractTag implements Tag {
                         html.append("☐");
                     }
                 }
-                html.append(head);
+                html.append(headText);
                 if(vol > 0 && qty%vol == 0){
                     html.append("<br/>");
                 }

@@ -19,6 +19,7 @@ package org.anyline.office.util;
 import org.anyline.log.Log;
 import org.anyline.log.LogProxy;
 import org.anyline.office.docx.entity.WDocument;
+import org.anyline.office.docx.entity.WElement;
 import org.anyline.office.docx.util.DocxUtil;
 import org.anyline.office.tag.Tag;
 import org.anyline.util.BasicUtil;
@@ -36,9 +37,9 @@ public class TagUtil {
      * 合并拆分到多个个t中标签，不限相同段落(p)<br/>
      * @param box 通常是body, p, table, tr, tc
      */
-    public static void merge(Element box){
+    public static void merge(WDocument doc, Element box){
         //全部t标签
-        List<Element> ts = DomUtil.elements(box, "t");
+        List<Element> ts = DomUtil.elements(true, box, "t");
         int size = ts.size();
         List<Element> items = new ArrayList<>();
         String full = "";
@@ -48,15 +49,15 @@ public class TagUtil {
             full += t.getText();
             if(full.contains("<")){
                 items.add(t);
-                if(!full.contains("<aol:") && !full.contains("</aol:")){
+                if(!full.contains("<"+doc.namespace()+":") && !full.contains("</"+doc.namespace()+":")){
                     if(full.length() > 6){
-                        //只有<但不是<aol:
+                        //只有<但不是<"+doc.namespace()+":
                         full = "";
                         items.clear();
                     }
                     continue;
                 }
-                if(isClose(full)){
+                if(isClose(doc, full)){
                     splits.add(items.get(0));
                     //这里不需要是一个完整标签，是完整开头或完整结尾都可以
                     DocxUtil.mergeText(items);
@@ -145,24 +146,28 @@ public class TagUtil {
         list.add(box);
         parse(doc, list, context);
     }
+    public static void parse(WDocument doc, WElement box, Context context){
+        List<Element> list = new ArrayList<>();
+        list.add(box.getSrc());
+        parse(doc, list, context);
+    }
     public static void parse(WDocument doc, List<Element> box, Context context){
         //全部t标签
-        List<Element> ts = DomUtil.elements(box, "t");
-        int size = ts.size();
-        List<Element> removes = new ArrayList<>();
+        List<Element> contents = DocxUtil.contents(box);
+        int size = contents.size();
         for(int i = 0; i < size; i++){
-            Element t = ts.get(i);
-            String txt = t.getText();
+            Element content = contents.get(i);
+            String txt = content.getText();
             if(txt.contains("<")){
                 List<Element> items = new ArrayList<>(); //tag head body foot所在的t
-                items.add(t);
+                items.add(content);
                 if(!RegularUtil.isFullTag(txt)){//如果不是完整标签(需要有开始和结束或自闭合)继续拼接下一个直到完成或失败
-                    List<Element> nexts = next(txt, ts, i+1);
+                    List<Element> nexts = next(doc, txt, contents, i+1);
                     if(!nexts.isEmpty()) {
-                        txt = t.getText() + DocxUtil.text(nexts);
+                        txt = content.getText() + DocxUtil.text(nexts);
                         //removes.addAll(items);
                         Element last = nexts.get(nexts.size() - 1);
-                        i = ts.indexOf(last);
+                        i = contents.indexOf(last);
                         items.addAll(nexts);
                     }else{
                         continue;
@@ -170,52 +175,45 @@ public class TagUtil {
                 }
                 if(RegularUtil.isFullTag(txt)){
                     try {
-                        txt = parse(doc, items, txt, context);
-                        //t.setText(txt);
+                        parse(doc, items, txt, context);
                     }catch (Exception e){
+                        log.error("解析异常:{}", txt);
                         e.printStackTrace();
                     }
                 }
             }
         }
-        DocxUtil.remove(removes);
     }
 
     /**
      * 解析标签
      * @param doc doc
-     * @param ts 标签所在的全部t
+     * @param contents 标签所在的全部可见内容
      * @param txt 标签文本
      * @param context context
-     * @return String
      * @throws Exception 解析异常
      */
-    public static String parse(WDocument doc, List<Element> ts, String txt, Context context) throws Exception{
+    public static void parse(WDocument doc, List<Element> contents, String txt, Context context) throws Exception{
         if(null == txt){
-            return "";
+            return;
         }
-        if(ts.isEmpty()){
-            return "";
+        if(contents.isEmpty()){
+            return;
         }
         //ts所在的及之间的所有p(tbl)
         //body部分不要根据t 因为空的p中没有t 要根据w:body.child
-        List<Element> tops = tops(doc, ts);
-        //if(tops.size() == 1){
-            //标签与标签体在同一段落中
-            //return parseSimpleTag(doc, ts, txt, context);
-       // }
         txt = TagUtil.format(txt);
         // 不需要拆分了 split已经拆分完了
         // List<String> tags = RegularUtil.fetchOutTag(txt);
-        //标签name如<aol:img 中的img
-        String name = name(txt, "aol:");
+        //标签name如<"+doc.namespace()+":img 中的img
+        String name = name(txt, ""+doc.namespace()+":");
 
         boolean isPre = false;
         if("pre".equals(name)){
-            //<aol:pre id="c"/>
+            //<"+doc.namespace()+":pre id="c"/>
             isPre = true;
         }else{
-            //<aol:date pre="c"
+            //<"+doc.namespace()+":date pre="c"
             String preId = RegularUtil.fetchAttributeValue(txt, "pre");
             if(null != preId){
                 isPre = true;
@@ -227,11 +225,10 @@ public class TagUtil {
             if (null != instance) {
                 //复制占位值
                 instance.init(doc);
-                instance.wts(ts);
-                instance.tops(tops);
-                instance.context(context);
                 instance.text(txt);
-                //把 aol标签解析成html标签 下一步会解析html标签
+                instance.contents(contents);
+                instance.context(context);
+                //把 "+doc.namespace()+"标签解析成html标签 下一步会解析html标签
                 instance.prepare();
                 instance.run();
                 //instance.release();
@@ -239,31 +236,38 @@ public class TagUtil {
             //txt = txt.replace(tag, html);
             //txt = BasicUtil.replaceFirst(txt, tag, html);
             //如果有子标签 应该在父标签中一块解析完
-            /*if(txt.contains("<aol:")){
+            /*if(txt.contains("<"+doc.namespace()+":")){
                 txt = parseTag(txt, variables);
             }*/
         }
-        return txt;
     }
-    public static List<Element> tops(WDocument doc, List<Element> ts){
+    public static List<Element> tops(WDocument doc, List<Element> contents){
         List<Element> tops = new ArrayList<>();
-        if(ts.isEmpty()){
+        if(contents.isEmpty()){
             return tops;
         }
         List<Element> all = doc.getSrc().elements();
-        Element t = ts.get(0);
-        Element top = DocxUtil.getParent(t, "tbl");
+        Element content = contents.get(0);
+        Element top = DocxUtil.getParent(content, "tbl");
         if(null == top){
-            top = DocxUtil.getParent(t, "p");
+            top = DocxUtil.getParent(content, "p");
         }
         int fr = all.indexOf(top);
         if(fr == -1){
+            //有可能是copy出来的不在doc中
+            for(Element item:contents){
+                Element tp = DocxUtil.getParent(item, "tbl");
+                if(null == tp){
+                    tp = DocxUtil.getParent(item, "p");
+                }
+                tops.add(tp);
+            }
             return tops;
         }
-        t = ts.get(ts.size()-1);
-        top = DocxUtil.getParent(t, "tbl");
+        content = contents.get(contents.size()-1);
+        top = DocxUtil.getParent(content, "tbl");
         if(null == top){
-            top = DocxUtil.getParent(t, "p");
+            top = DocxUtil.getParent(content, "p");
         }
         int to = all.indexOf(top);
         for(int i=fr; i<=to; i++){
@@ -274,16 +278,16 @@ public class TagUtil {
 
     public static Tag instance(WDocument doc, String tag){
         Tag instance = null;
-        if(null == tag || !tag.contains("<aol:")){
+        if(null == tag || !tag.contains("<"+doc.namespace()+":")){
             return null;
         }
-        String name = name(tag, "aol:");
+        String name = name(tag, ""+doc.namespace()+":");
         String parse = tag; //解析的标签体
         //先执行外层的 外层需要设置新变量值
         if (null == name) {
             log.error("未识别的标签格式:{}", tag);
         } else {
-            //<aol:date format="" value=""/>
+            //<"+doc.namespace()+":date format="" value=""/>
             instance = doc.tag(name);
         }
         String ref_text = null;
@@ -292,15 +296,15 @@ public class TagUtil {
             ref_text = doc.ref(refId);
         }
         if(null == instance) {
-            //<aol:c/>
+            //<"+doc.namespace()+":c/>
             refId = name;
             String define = doc.ref(refId);
             ref_text = define;
             if (null != define) {
-                //<aol:c/>
-                //<aol:date ref="c" format="" value=""/>
+                //<"+doc.namespace()+":c/>
+                //<"+doc.namespace()+":date ref="c" format="" value=""/>
                 parse = define;
-                name = name(parse, "aol:");
+                name = name(parse, ""+doc.namespace()+":");
                 if (null == name) {
                     log.error("未识别的标签格式:{}", parse);
                 } else {
@@ -316,11 +320,11 @@ public class TagUtil {
     /**
      * 获取最外层tag所在的全部t
      * @param items 搜索范围
-     * @param start 开始标记 &lt;或&lt;aol:
+     * @param start 开始标记 &lt;或&lt;"+doc.namespace()+":
      * @param index 开始位置
      * @return ts
      */
-    public static List<Element> next(String start, List<Element> items, int index){
+    public static List<Element> next(WDocument doc, String start, List<Element> items, int index){
         List<Element> list = new ArrayList<>();
         int size = items.size();
         String full = "<"+RegularUtil.cut(start, "<", RegularUtil.TAG_END);
@@ -336,15 +340,15 @@ public class TagUtil {
             full = full.replace("\"", "'");
             String name = null;
             if(full.length() > 5){
-                if(!full.trim().startsWith("<aol:")){
+                if(!full.trim().startsWith("<"+doc.namespace()+":")){
                     //不是标签
                     return new ArrayList<>();
                 }
-                name = RegularUtil.cut(full, "aol:", " ");
+                name = RegularUtil.cut(full, ""+doc.namespace()+":", " ");
             }
             if(null != name){
-                String head ="<aol:" + name;
-                String foot_d = "</aol:"+name+">";
+                String head ="<"+doc.namespace()+":" + name;
+                String foot_d = "</"+doc.namespace()+":"+name+">";
                 String foot_s = "/>";
                 int end_d = full.indexOf(foot_d);
                 int end_s = full.indexOf(foot_s);
@@ -357,7 +361,7 @@ public class TagUtil {
                         //单标签结束
                         break;
                     }else{
-                        //<aol:if test='${total>10}' var='if1'/>
+                        //<"+doc.namespace()+":if test='${total>10}' var='if1'/>
                         //或者>在引号内
                         chk_s = chk_s.substring(0, chk_s.lastIndexOf(">"));
                         if(!BasicUtil.isFullString(chk_s)){
@@ -385,19 +389,19 @@ public class TagUtil {
      * @param txt tag
      * @return boolean
      */
-    public static boolean isClose(String txt){
+    public static boolean isClose(WDocument doc, String txt){
         String chk = TagUtil.format(txt).replace("\"", "'");
         chk = chk.replaceAll("'.*?'", "''");
-        //<aol:if></aol:if> <aol:number/>
-        if(!chk.contains("<aol:") && !chk.contains("</aol:")){
+        //<"+doc.namespace()+":if></"+doc.namespace()+":if> <"+doc.namespace()+":number/>
+        if(!chk.contains("<"+doc.namespace()+":") && !chk.contains("</"+doc.namespace()+":")){
             return true;
         }
-        int idx = chk.lastIndexOf("<aol:");
+        int idx = chk.lastIndexOf("<"+doc.namespace()+":");
         if(idx == -1){
-            idx = chk.lastIndexOf("</aol:");
+            idx = chk.lastIndexOf("</"+doc.namespace()+":");
         }
         if(idx != -1){
-            //aol:后部分
+            //"+doc.namespace()+":后部分
             chk = chk.substring(idx+5);
 
             //if test=”${xx> 100 && xx <10}
@@ -439,35 +443,36 @@ public class TagUtil {
 
     /**
      * 删除标签及标签体
+     * 换成box.remove()
      * 第一个top保留标签之前内容
      * 最后个top保留标签之后内容
      * @param tops tops
      */
-    public static void clear(List<Element> tops){
+    public static void clear(WDocument doc, List<Element> tops){
         int size = tops.size();
         for(int i=0; i<size; i++){
             Element element = tops.get(i);
             if(i == 0){
                 //删除head及之后内容
                 boolean remove = false;
-                List<Element> ts = DocxUtil.contents(element);
-                for(Element t:ts){
-                    String txt = t.getText();
-                    if(txt.startsWith("<aol:")){
-                        log.warn("清空first:{}", txt);
-                        DocxUtil.remove(t);
+                List<Element> contents = DocxUtil.contents(element);
+                for(Element content:contents){
+                    String txt = content.getText();
+                    if(txt.startsWith("<"+doc.namespace()+":")){
+                        //log.warn("清空first:{}", txt);
+                        DocxUtil.remove(content);
                         remove = true;
-                        if(txt.endsWith("</aol:")){
+                        if(txt.endsWith("</"+doc.namespace()+":")){
                             remove = false;
                         }
-                    }else if(txt.startsWith("</aol:")){
-                        log.warn("清空first:{}", txt);
-                        DocxUtil.remove(t);
+                    }else if(txt.startsWith("</"+doc.namespace()+":")){
+                        //log.warn("清空first:{}", txt);
+                        DocxUtil.remove(content);
                         remove = false;
                     }else {
                         if (remove) {
-                            log.warn("清空first:{}", txt);
-                            DocxUtil.remove(t);
+                            //log.warn("清空first:{}", txt);
+                            DocxUtil.remove(content);
                         }
                     }
                 }
@@ -478,19 +483,19 @@ public class TagUtil {
             }else if(i == size-1){
                 //删除foot及之前内容
                 int remove = -1;
-                List<Element> ts = DocxUtil.contents(element);
-                int len = ts.size();
+                List<Element> contents = DocxUtil.contents(element);
+                int len = contents.size();
                 for(int r = 0; r<len; r++){
-                    Element t = ts.get(r);
+                    Element t = contents.get(r);
                     String txt = t.getText();
-                    if(txt.startsWith("</aol:")){
-                        //找到最后一个</aol
+                    if(txt.startsWith("</"+doc.namespace()+":")){
+                        //找到最后一个</aot
                         remove = r;
                     }
                 }
                 for(int r = 0; r<=remove; r++){
-                    log.warn("清空last:{}", DocxUtil.text(ts.get(r)));
-                    DocxUtil.remove(ts.get(r));
+                    //log.warn("清空last:{}", DocxUtil.text(ts.get(r)));
+                    DocxUtil.remove(contents.get(r));
                 }
                 //如果foot之后中没有其他内容 删除整个结点(p)
                 if(DocxUtil.isEmpty(element)){
@@ -498,7 +503,7 @@ public class TagUtil {
                 }
             }else {
                 Element top = tops.get(i);
-                log.warn("清空inner:{}", DocxUtil.text(top));
+                //log.warn("清空inner:{}", DocxUtil.text(top));
                 DocxUtil.remove(top);
             }
         }
