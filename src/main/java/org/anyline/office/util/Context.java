@@ -16,16 +16,22 @@
 
 package org.anyline.office.util;
 
+import ognl.Ognl;
+import ognl.OgnlContext;
 import org.anyline.adapter.KeyAdapter;
 import org.anyline.entity.DataRow;
+import org.anyline.log.Log;
+import org.anyline.log.LogProxy;
 import org.anyline.util.BasicUtil;
 import org.anyline.util.BeanUtil;
+import org.anyline.util.DefaultOgnlMemberAccess;
 import org.anyline.util.regular.RegularUtil;
 
 import java.io.File;
 import java.util.*;
 
 public class Context {
+    private static Log log = LogProxy.get(Context.class);
     private Context parent = null;
     /**
      * 文本原样替换，不解析原文中的标签,没有${}的也不要添加
@@ -214,7 +220,16 @@ public class Context {
                             return v;
                         }
                     }
+                }else if(key.contains("+") || key.contains("-") || key.contains("*") || key.contains("/") || key.contains("%")){
+                    try{
+                        OgnlContext ognl = new OgnlContext(null, null, new DefaultOgnlMemberAccess(true));
+                        data = Ognl.getValue(key, ognl, variables);
+                        return data;
+                    }catch (Exception e){
+                        log.error("ognl解析异常");
+                    }
                 }
+
             }
             data = variables.get(key);
             if(null == data){
