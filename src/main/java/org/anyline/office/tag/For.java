@@ -173,7 +173,7 @@ public class For extends AbstractTag implements Tag {
                         map.clear();
                         count ++;
                         Object item = list.get(i);
-                        if(i<size-1){
+                        if(i<end){
                             map.put("next", list.get(i+1));
                         }
                         if(i>0){
@@ -218,7 +218,7 @@ public class For extends AbstractTag implements Tag {
                     count++;
                     map.put("index", i);
                     map.put("count", count);
-                    if(i<end-1){
+                    if(i<end){
                         map.put("next", i+1);
                     }
                     if(i>0){
