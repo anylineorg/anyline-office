@@ -226,7 +226,7 @@ public class Context {
                         data = Ognl.getValue(key, ognl, variables);
                         return data;
                     }catch (Exception e){
-                        log.error("ognl解析异常");
+                        log.error("ognl解析异常:{}", key);
                     }
                 }
 
