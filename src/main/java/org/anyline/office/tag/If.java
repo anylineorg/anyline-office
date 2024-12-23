@@ -73,21 +73,24 @@ public class If extends AbstractTag implements Tag {
                 }
             } else {
                 //html = elseValue;
-                //删除body中的tops
-                //TagUtil.clear(doc, tops);
-                box.remove();
-                if (remove) {//删除行或行
-                    if ("tc".equalsIgnoreCase(scope) || "td".equalsIgnoreCase(scope)) {
-                        Element tc = DocxUtil.getParent(contents.get(0), "tc");
-                        Element tr = tc.getParent();
-                        WTr wtr = WTr.tr(tr);
-                        wtr.remove(tc);
-                    } else if ("tr".equalsIgnoreCase(scope)) {
-                        Element tr = DocxUtil.getParent(contents.get(0), "tr");
-                        Element table = tr.getParent();
-                        WTable wtable = WTable.table(table);
-                        wtable.remove(tr);
+                //删除body中的tops 除非有else value需要输出
+                if(BasicUtil.isEmpty(elseValue)){
+                    box.remove();
+                    if (remove) {//删除行或行
+                        if ("tc".equalsIgnoreCase(scope) || "td".equalsIgnoreCase(scope)) {
+                            Element tc = DocxUtil.getParent(contents.get(0), "tc");
+                            Element tr = tc.getParent();
+                            WTr wtr = WTr.tr(tr);
+                            wtr.remove(tc);
+                        } else if ("tr".equalsIgnoreCase(scope)) {
+                            Element tr = DocxUtil.getParent(contents.get(0), "tr");
+                            Element table = tr.getParent();
+                            WTable wtable = WTable.table(table);
+                            wtable.remove(tr);
+                        }
                     }
+                }else{
+                    output(elseValue);
                 }
             }
         }else{
