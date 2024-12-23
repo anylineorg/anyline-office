@@ -531,6 +531,9 @@ public class DocxUtil {
         }
         return builder.toString();
     }
+    public static String text(WElement element){
+        return text(element.getSrc());
+    }
     public static boolean isBlock(String text){
         if(null != text){
             List<String> styles = RegularUtil.cuts(text,true,"<style",">","</style>");

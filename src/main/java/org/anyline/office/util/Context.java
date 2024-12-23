@@ -233,10 +233,11 @@ public class Context {
             if(null == data){
                 if(key.contains(".")){
                     //user.dept.name
+                    //user[0].name
                     String[] ks = key.split("\\.");
                     int size = ks.length;
                     if(size > 1) {
-                        data = variables.get(ks[0]);
+                        data = data("${"+ks[0]+"}");
                         for (int i = 1; i < size; i++) {
                             String k = ks[i];
                             if(null == data){
@@ -280,6 +281,36 @@ public class Context {
                     }
                 }
             }
+            if(null == data){
+                //list[0]
+                if(key.trim().endsWith("]") && key.contains("[")){
+                    String k = RegularUtil.cut(key, RegularUtil.TAG_BEGIN, "[").trim();
+                    int idx = BasicUtil.parseInt(RegularUtil.cut(key,"[", "]"), 0);
+                    data = variables.get(k);
+                    if(data instanceof Collection){
+                        Collection cols = ((Collection)data);
+                        if(idx < cols.size()){
+                            Iterator iter = cols.iterator();
+                            int i = 0;
+                            while (iter.hasNext()){
+                                Object item = iter.next();
+                                if(i == idx){
+                                    data = item;
+                                    break;
+                                }
+                                i ++;
+                            }
+                        }
+                    }
+                }
+                if(key.contains("+") || key.contains("-") || key.contains("*") || key.contains("/") || key.contains("%") || key.contains(">") || key.contains("<") || key.contains("=")){
+                    try{
+                        OgnlContext ognl = new OgnlContext(null, null, new DefaultOgnlMemberAccess(true));
+                        data = Ognl.getValue(key, ognl, variables);
+                    }catch (Exception ignored){
+                    }
+                }
+            }
         }else if(key.startsWith("{") && key.endsWith("}")){
             key = key.replace("{", "").replace("}", "");
             data = key;
@@ -300,16 +331,6 @@ public class Context {
                     }
                 }
                 data = list;
-            }
-        }
-        if(null == data){
-            if(key.contains("+") || key.contains("-") || key.contains("*") || key.contains("/") || key.contains("%")){
-                try{
-                    OgnlContext ognl = new OgnlContext(null, null, new DefaultOgnlMemberAccess(true));
-                    data = Ognl.getValue(key, ognl, variables);
-                }catch (Exception e){
-                    log.error("ognl解析异常:{}", key);
-                }
             }
         }
         return data;

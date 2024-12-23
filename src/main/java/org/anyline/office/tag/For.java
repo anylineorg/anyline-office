@@ -192,10 +192,10 @@ public class For extends AbstractTag implements Tag {
                         if(type == 1){
                             //遍历td
                             //在tr中添加td
-                            tc(tc_index+count*wtcs.size(), wtcs, item_context);
+                            tc(tc_index+(count-1)*wtcs.size(), wtcs, item_context);
                         } else if(type == 2){
                             //遍历tr
-                            tr(tr_index+count*wtrs.size(), wtrs, item_context);
+                            tr(tr_index+(count-1)*wtrs.size(), wtrs, item_context);
                         } else if(type == 3){
                             table(wtable, item_context);
                         }else{
@@ -234,10 +234,10 @@ public class For extends AbstractTag implements Tag {
                     item_context.variable(status, map);
                     if(type == 1){
                         //遍历td
-                        tc(tc_index++, wtcs, item_context);
+                        tc(tc_index+(count-1)*wtcs.size(), wtcs, item_context);
                     } else if(type == 2) {
                         //遍历tr
-                        tr(tr_index++, wtrs, item_context);
+                        tr(tr_index+(count-1)*wtrs.size(), wtrs, item_context);
                     } else if(type == 3) {
                         table(wtable, item_context);
                     } else {
