@@ -220,14 +220,6 @@ public class Context {
                             return v;
                         }
                     }
-                }else if(key.contains("+") || key.contains("-") || key.contains("*") || key.contains("/") || key.contains("%")){
-                    try{
-                        OgnlContext ognl = new OgnlContext(null, null, new DefaultOgnlMemberAccess(true));
-                        data = Ognl.getValue(key, ognl, variables);
-                        return data;
-                    }catch (Exception e){
-                        log.error("ognl解析异常:{}", key);
-                    }
                 }
 
             }
@@ -308,6 +300,16 @@ public class Context {
                     }
                 }
                 data = list;
+            }
+        }
+        if(null == data){
+            if(key.contains("+") || key.contains("-") || key.contains("*") || key.contains("/") || key.contains("%")){
+                try{
+                    OgnlContext ognl = new OgnlContext(null, null, new DefaultOgnlMemberAccess(true));
+                    data = Ognl.getValue(key, ognl, variables);
+                }catch (Exception e){
+                    log.error("ognl解析异常:{}", key);
+                }
             }
         }
         return data;

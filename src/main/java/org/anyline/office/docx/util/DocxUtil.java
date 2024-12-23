@@ -21,6 +21,7 @@ package org.anyline.office.docx.util;
 
 import org.anyline.log.Log;
 import org.anyline.log.LogProxy;
+import org.anyline.office.docx.entity.WDocument;
 import org.anyline.office.docx.entity.WElement;
 import org.anyline.office.util.TagUtil;
 import org.anyline.util.BasicUtil;
@@ -514,18 +515,21 @@ public class DocxUtil {
      * @return String
      */
     public static String text(Element element){
-        String text = "";
+        StringBuilder builder = new StringBuilder();
         Iterator<Node> nodes = element.nodeIterator();
         while (nodes.hasNext()) {
             Node node = nodes.next();
             int type = node.getNodeType();
             if(type == 3){
-                text += node.getText();
+                builder.append(node.getText());
             }else if(node instanceof Element){
-                text += text((Element)node);
+                builder.append(text((Element)node));
             }
         }
-        return text;
+        if(element.getName().equalsIgnoreCase("p")){
+            builder.append("\n");
+        }
+        return builder.toString();
     }
     public static boolean isBlock(String text){
         if(null != text){
@@ -1011,7 +1015,7 @@ public class DocxUtil {
      * @param src Element
      * @param replaces replaces
      */
-    public static void replace(Element src, Map<String, String> replaces){
+    public static void replace(WDocument doc, Element src, Map<String, String> replaces){
         List<Element> ts = DomUtil.elements(true, src, "t");
         for(Element t:ts){
             String txt = t.getTextTrim();
@@ -1025,6 +1029,9 @@ public class DocxUtil {
             int index = elements.indexOf(t);
             for(int i=0; i<flags.size(); i++){
                 String flag = flags.get(i);
+                if(null == flag){
+                    continue;
+                }
                 String content = flag;
                 String key = null;
                 if(flag.startsWith("${") && flag.endsWith("}")) {
@@ -1039,6 +1046,9 @@ public class DocxUtil {
                     if(null == content){
                         content = replaces.get(flag);
                     }
+                }
+                if(null == content){
+                    content = doc.getPlaceholderDefault();
                 }
                 txt = txt.replace(flag, content);
             }

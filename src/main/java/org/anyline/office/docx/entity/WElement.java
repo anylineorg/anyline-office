@@ -41,7 +41,7 @@ public class WElement {
      * @param replaces replaces
      */
     public void replace(Map<String, String> replaces){
-        DocxUtil.replace(getSrc(), replaces);
+        DocxUtil.replace(root, getSrc(), replaces);
     }
     /**
      * 删除行内文本内容

@@ -68,6 +68,7 @@ public class TagBox {
         for(int i=0; i<size; i++){
             Element top = tops.get(i);
             Element copy = top.createCopy();
+            copy.setParent(top.getParent());
             //删除head前foot后内容
             List<Element> contents = DocxUtil.contents(copy);
 

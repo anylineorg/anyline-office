@@ -57,6 +57,8 @@ public interface Tag {
     default void release(){}
     void text(String text);
     String text();
-
-
+    Tag parent();
+    void parent(Tag parent);
+    Element last();
+    void last(Element last);
 }

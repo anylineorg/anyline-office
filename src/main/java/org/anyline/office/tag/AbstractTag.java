@@ -46,6 +46,8 @@ public abstract class AbstractTag implements Tag {
     protected Object data;
     protected String property;
     protected TagBox box;
+    protected Tag parent;
+    protected Element last;
 
     public void init(WDocument doc) {
         this.doc = doc;
@@ -323,4 +325,29 @@ public abstract class AbstractTag implements Tag {
         }
     }
 
+    @Override
+    public Tag parent() {
+        return parent;
+    }
+
+    @Override
+    public void parent(Tag parent) {
+        this.parent = parent;
+    }
+    @Override
+    public Element last() {
+        if(null == last && null != parent){
+            return parent.last();
+        }
+        return last;
+    }
+
+    @Override
+    public void last(Element last) {
+        if(null != parent){
+            parent.last(last);
+        } else {
+            this.last = last;
+        }
+    }
 }

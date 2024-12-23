@@ -141,17 +141,17 @@ public class TagUtil {
         }
         return list;
     }
-    public static void parse(WDocument doc, Element box, Context context){
+    public static void parse(WDocument doc, Tag parent, Element box, Context context){
         List<Element> list = new ArrayList<>();
         list.add(box);
-        parse(doc, list, context);
+        parse(doc, parent, list, context);
     }
-    public static void parse(WDocument doc, WElement box, Context context){
+    public static void parse(WDocument doc, Tag parent, WElement box, Context context){
         List<Element> list = new ArrayList<>();
         list.add(box.getSrc());
-        parse(doc, list, context);
+        parse(doc, parent, list, context);
     }
-    public static void parse(WDocument doc, List<Element> box, Context context){
+    public static void parse(WDocument doc, Tag parent, List<Element> box, Context context){
         //全部t标签
         List<Element> contents = DocxUtil.contents(box);
         int size = contents.size();
@@ -175,7 +175,7 @@ public class TagUtil {
                 }
                 if(RegularUtil.isFullTag(txt)){
                     try {
-                        parse(doc, items, txt, context);
+                        parse(doc, parent, items, txt, context);
                     }catch (Exception e){
                         log.error("解析异常:{}", txt);
                         e.printStackTrace();
@@ -193,7 +193,7 @@ public class TagUtil {
      * @param context context
      * @throws Exception 解析异常
      */
-    public static void parse(WDocument doc, List<Element> contents, String txt, Context context) throws Exception{
+    public static void parse(WDocument doc, Tag parent, List<Element> contents, String txt, Context context) throws Exception{
         if(null == txt){
             return;
         }
@@ -228,6 +228,7 @@ public class TagUtil {
                 instance.text(txt);
                 instance.contents(contents);
                 instance.context(context);
+                instance.parent(parent);
                 //把 "+doc.namespace()+"标签解析成html标签 下一步会解析html标签
                 instance.prepare();
                 instance.run();

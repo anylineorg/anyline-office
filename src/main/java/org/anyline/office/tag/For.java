@@ -38,7 +38,6 @@ public class For extends AbstractTag implements Tag {
     private Integer begin;
     private Integer end;
     private Integer step;
-    private Element prev;
     public void release(){
         super.release();
         items = null;
@@ -141,6 +140,7 @@ public class For extends AbstractTag implements Tag {
         begin = BasicUtil.parseInt(fetchAttributeString("begin", "start", " b"), 0);
         step = BasicUtil.parseInt(fetchAttributeString("step"), 1);
         end = BasicUtil.parseInt(fetchAttributeString("end", " e"), null);
+
          if(BasicUtil.isNotEmpty(items)) {//遍历集合
             if(items instanceof String){
                 String str = (String) items;
@@ -150,6 +150,12 @@ public class For extends AbstractTag implements Tag {
                     }
                 }else{
                     items = BeanUtil.array2list(str.split(","));
+                }
+            }
+            if(null != items){
+                if(!(items instanceof Collection)){
+                    log.error("数据源仅支持集合形式:{}", items);
+                    return;
                 }
             }
             if (items instanceof Collection) {
@@ -241,13 +247,10 @@ public class For extends AbstractTag implements Tag {
             }
         }
          box.remove();
-         //以<for>开头的 内容可能插入到<for之前，清空时需要留下这部分内容
-        if(type != 1) {
-            //TagUtil.clear(doc, tops);
-        }else{
-            //tc不能清空全部表里可能有其他for
-            //TagUtil.clear(doc, tcs);
-        }
+         if(null == parent || !(parent instanceof For)){
+             //最外层执行完后清空定位
+            last(null);
+         }
     }
 
     /**
@@ -260,69 +263,39 @@ public class For extends AbstractTag implements Tag {
         //遍历td
         //在tr中添加td
         WTr wtr = WTr.tr(templates.get(0).getSrc().getParent());
-        int size = templates.size();
         int c = 0;
         List<Element> news = new ArrayList<>();
         for(WTc template:templates){
             WTc copy = template.clone(true);
-            //TODO 注意<aot:a 格式
-            //TODO 只清空当前层for
-            List<Element> cts = DocxUtil.contents(copy);
-            /*for(Element t:cts){
-                String t_txt = DocxUtil.text(t);
-                //TODO 如果有多层 会多删除其他foot 应该从两头开始查询第一个
-                t_txt = t_txt.replace(box.head().text(), "").replace(box.foot().text(), "");
-                t.setText(t_txt);
-            }*/
             wtr.insert(index+c, copy);
             news.add(copy.getSrc());
             c++;
         }
-        TagUtil.parse(doc, news, context);
+        TagUtil.parse(doc, this, news, context);
         doc.replace(news, context);
     }
     private void tr(int index, List<WTr> templates, Context context) throws Exception{
-        int size = templates.size();
         WTable wtable = WTable.table(templates.get(0).getSrc().getParent());
         int r = 0;
         List<Element> news = new ArrayList<>();
         for(WTr template:templates){
             WTr copy = template.clone(true);
             wtable.insert(index+r, copy);
-            /*List<WTc> wtcs = copy.getTcs();
-            for(WTc wtc:wtcs){
-                Element csrc = wtc.getSrc();
-                List<Element> cts = DomUtil.elements(true, csrc, "t");
-                String txt = DocxUtil.text(cts);
-                //TODO 注意<aot:a 格式
-                //TODO 只清空当前层for
-                if(r == 0 || r==size-1) {
-                    for(Element t:cts){
-                        String t_txt = DocxUtil.text(t);
-                        //TODO 如果有多层 会多删除其他foot 应该从两头开始查询第一个
-                        t_txt = t_txt.replace(box.head().text(), "").replace(box.foot().text(), "");
-                        t.setText(t_txt);
-                    }
-                }
-            }*/
             news.add(copy.getSrc());
             r ++;
         }
-        TagUtil.parse(doc, news, context);
+        TagUtil.parse(doc, this, news, context);
         doc.replace(news, context);
     }
     private void table(WTable template, Context context){
-        if(null == prev){
-            prev = box.tops().get(0);
+        if(null == last()){
+            last(box.tops().get(0));
         }
         WTable copy = template.clone(true);
-        DocxUtil.after(copy.getSrc(), prev);
-        /*List<Element> contents = DocxUtil.contents(copy);
-        DocxUtil.remove(contents.get(box.foot().index()));
-        DocxUtil.remove(contents.get(box.head().index()));*/
-        TagUtil.parse(doc, copy, context);
+        DocxUtil.after(copy.getSrc(), last());
+        TagUtil.parse(doc, this, copy, context);
         doc.replace(copy, context);
-        prev = copy.getSrc();
+        last(copy.getSrc());
     }
     private void body(Context context) {
         List<Element> templates = box.templates();
@@ -341,10 +314,10 @@ public class For extends AbstractTag implements Tag {
             }
         }
         try {
-            TagUtil.parse(doc, news, context);
+            TagUtil.parse(doc, this, news, context);
             doc.replace(news, context);
         }catch (Exception e){
-            log.error("[body 解析异常]\n[template:{}]\n[copy:{}]", DocxUtil.text(templates), DocxUtil.text(news));
+            log.error("[body 解析异常]\n[template:{}]", DocxUtil.text(templates));
             e.printStackTrace();
         }
     }
@@ -357,15 +330,15 @@ public class For extends AbstractTag implements Tag {
          if(box.head().last()){
             //head是最后一个 当前行没有其他内容 需要便利
              //下一行不要插入到foot之后，因为foot.p可能有其他标签外内容
-             if(null == prev) {
-                 prev = box.tops().get(0);
+             if(null == last()) {
+                 last(box.tops().get(0));
              }
             return list;
         }
          //log.warn("copy first:{}", DocxUtil.text(template));
 
-        if(null == prev && head_index > 0){
-            prev = DocxUtil.contents(box.tops().get(0)).get(head_index -1);
+        if(null == last() && head_index > 0){
+            last(DocxUtil.contents(box.tops().get(0)).get(head_index -1));
         }
 
         int end = contents.size();
@@ -374,22 +347,22 @@ public class For extends AbstractTag implements Tag {
             Element copy = item.createCopy();
             //log.warn("copy first item:{}", DocxUtil.text(copy));
             list.add(copy);
-            if(null != prev){
+            if(null != last()){
                 //如果有prev就插入到prev之后 如果prev是p 则插入
-                if(prev.getName().equalsIgnoreCase("p")){
-                    Element r = prev.addElement("w:r");
+                if(last().getName().equalsIgnoreCase("p")){
+                    Element r = last().addElement("w:r");
                     r.add(copy);
                 }else {
-                    DocxUtil.after(copy, prev);
+                    DocxUtil.after(copy, last());
                 }
             }else{
                 //如果没有prev就插入到head之前
                 DocxUtil.before(copy, this.contents.get(0));
             }
-            prev = copy;
+            last(copy);
         }
-        if(!prev.getName().equalsIgnoreCase("p")) {
-            prev = DocxUtil.getParent(prev, "p");
+        if(!last().getName().equalsIgnoreCase("p")) {
+            last(DocxUtil.getParent(last(), "p"));
         }
         return list;
     }
@@ -400,7 +373,6 @@ public class For extends AbstractTag implements Tag {
             return list;
         }
         Element copy = last.createCopy();
-        //log.warn("copy last item:{}", DocxUtil.text(copy));
         //找到结束结束标签 删除结束标签及之后的内容
         List<Element> contents = DocxUtil.contents(copy);
         int size = contents.size();
@@ -409,15 +381,15 @@ public class For extends AbstractTag implements Tag {
             DocxUtil.remove(item);
         }
         list.add(copy);
-        DocxUtil.after(copy, prev);
-        prev = copy;
+        DocxUtil.after(copy, last());
+        last(copy);
         return list;
     }
     private List<Element> copyInner(Element inner){
         List<Element> list = new ArrayList<>();
         Element copy = inner.createCopy();
-        if(null != prev) {
-            DocxUtil.after(copy, prev);
+        if(null != last()) {
+            DocxUtil.after(copy, last());
         }else{
             //如果没有prev就插入到head之前
             //第一个inner
@@ -425,7 +397,7 @@ public class For extends AbstractTag implements Tag {
             DocxUtil.before(copy, contents.get(0));
         }
         list.add(copy);
-        prev = copy;
+        last(copy);
         return list;
     }
 }

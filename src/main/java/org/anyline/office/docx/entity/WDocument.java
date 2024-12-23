@@ -458,7 +458,7 @@ public class WDocument extends WElement {
      * 替换占位符前 先解析标签
      */
     public void parseTag(){
-        TagUtil.parse(this,  src, context);
+        TagUtil.parse(this,  null, src, context);
     }
     public String ref(String id){
         return predefines.get(id);
@@ -2093,5 +2093,4 @@ public class WDocument extends WElement {
         }
         return builder.toString();
     }
-
 }

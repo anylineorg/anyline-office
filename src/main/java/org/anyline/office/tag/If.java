@@ -69,7 +69,7 @@ public class If extends AbstractTag implements Tag {
                     //如果有value值
                     output(value);
                 } else {
-                    TagUtil.parse(doc, box.tops(), context);
+                    TagUtil.parse(doc, this, box.tops(), context);
                 }
             } else {
                 //html = elseValue;
