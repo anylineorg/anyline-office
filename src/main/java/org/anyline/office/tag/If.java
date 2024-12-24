@@ -72,7 +72,6 @@ public class If extends AbstractTag implements Tag {
                     TagUtil.parse(doc, this, box.tops(), context);
                 }
             } else {
-                //html = elseValue;
                 //删除body中的tops 除非有else value需要输出
                 if(BasicUtil.isEmpty(elseValue)){
                     box.remove();

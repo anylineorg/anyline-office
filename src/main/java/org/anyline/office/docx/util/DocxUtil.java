@@ -644,12 +644,10 @@ public class DocxUtil {
         //log.warn("删除:{}", text(element));
         if(null != parent){
             parent.remove(element);
-            if(DocxUtil.isEmpty(parent)) {
+            if(DocxUtil.isEmpty(parent) && !parent.getName().equalsIgnoreCase("tc")) {
                 remove(parent);
             }
-        }/*else{
-            log.error("重复删除:{}", element.getText());
-        }*/
+        }
     }
 
     /**

@@ -137,9 +137,9 @@ public class Context {
         if(null == key){
             return null;
         }
-        key = key.trim();
+        String kk = key.trim();
         Object data = null;
-        if(BasicUtil.checkEl(key)){
+        if(BasicUtil.checkEl(kk)){
             /**
              * 当前时间 ${aov:now}
              * 随机8位字符${aov:random:8} ${aov:string:8}
@@ -148,10 +148,10 @@ public class Context {
              * UUID  ${aov:uuid}
              */
             //${users}
-            key = key.substring(2, key.length() - 1).trim();
-            if(key.startsWith("aov:")){
+            kk = kk.substring(2, kk.length() - 1).trim();
+            if(kk.startsWith("aov:")){
                 //内置常量
-                String[] tmps = key.split(":");
+                String[] tmps = kk.split(":");
                 if(tmps.length > 1){
                     String var = tmps[1];
                     //当前时间
@@ -191,9 +191,9 @@ public class Context {
                     }
                 }
             }else{
-                if(key.contains(":")){
-                    key = TagUtil.format(key);
-                    String[] ks = key.split(":");
+                if(kk.contains(":")){
+                    kk = TagUtil.format(kk);
+                    String[] ks = kk.split(":");
                     int len = ks.length;
                     for(int idx = 0; idx <len; idx ++){
                         String k = ks[idx];
@@ -223,18 +223,18 @@ public class Context {
                 }
 
             }
-            data = variables.get(key);
+            data = variables.get(kk);
             if(null == data){
-                data = htmls.get(key);
+                data = htmls.get(kk);
             }
             if(null == data){
-                data = texts.get(key);
+                data = texts.get(kk);
             }
             if(null == data){
-                if(key.contains(".")){
+                if(kk.contains(".")){
                     //user.dept.name
                     //user[0].name
-                    String[] ks = key.split("\\.");
+                    String[] ks = kk.split("\\.");
                     int size = ks.length;
                     if(size > 1) {
                         data = data("${"+ks[0]+"}");
@@ -283,9 +283,9 @@ public class Context {
             }
             if(null == data){
                 //list[0]
-                if(key.trim().endsWith("]") && key.contains("[")){
-                    String k = RegularUtil.cut(key, RegularUtil.TAG_BEGIN, "[").trim();
-                    int idx = BasicUtil.parseInt(RegularUtil.cut(key,"[", "]"), 0);
+                if(kk.trim().endsWith("]") && kk.contains("[")){
+                    String k = RegularUtil.cut(kk, RegularUtil.TAG_BEGIN, "[").trim();
+                    int idx = BasicUtil.parseInt(RegularUtil.cut(kk,"[", "]"), 0);
                     data = variables.get(k);
                     if(data instanceof Collection){
                         Collection cols = ((Collection)data);
@@ -303,19 +303,19 @@ public class Context {
                         }
                     }
                 }
-                if(key.contains("+") || key.contains("-") || key.contains("*") || key.contains("/") || key.contains("%") || key.contains(">") || key.contains("<") || key.contains("=")){
+                if(kk.contains("+") || kk.contains("-") || kk.contains("*") || kk.contains("/") || kk.contains("%") || kk.contains(">") || kk.contains("<") || kk.contains("=")){
                     try{
                         OgnlContext ognl = new OgnlContext(null, null, new DefaultOgnlMemberAccess(true));
-                        data = Ognl.getValue(key, ognl, variables);
+                        data = Ognl.getValue(kk, ognl, variables);
                     }catch (Exception ignored){
                     }
                 }
             }
-        }else if(key.startsWith("{") && key.endsWith("}")){
-            key = key.replace("{", "").replace("}", "");
-            data = key;
-            if(key.contains(",")){
-                String[] ks = key.split(",");
+        }else if(kk.startsWith("{") && kk.endsWith("}")){
+            kk = kk.replace("{", "").replace("}", "");
+            data = kk;
+            if(kk.contains(",")){
+                String[] ks = kk.split(",");
                 List<String> list = new ArrayList<>();
                 for(String k:ks){
                     //{0:关,1:开}
@@ -332,6 +332,9 @@ public class Context {
                 }
                 data = list;
             }
+        }
+        if(null == data && null != parent){
+            data = parent.data(key);
         }
         return data;
     }

@@ -313,7 +313,12 @@ public abstract class AbstractTag implements Tag {
         }
 
         if(BasicUtil.isNotEmpty(var)){
-            doc.variable(var, result);
+            context.variable(var, result);
+            Context pc = context.parent();
+            if(null == pc){
+                pc = doc.context();
+            }
+            pc.variable(var, result);
             DocxUtil.remove(t);
         }else{
             t.setText(result.toString());
