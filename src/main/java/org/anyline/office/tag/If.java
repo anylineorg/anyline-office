@@ -98,5 +98,4 @@ public class If extends AbstractTag implements Tag {
             doc.variable(var, chk);
         }
     }
-
 }

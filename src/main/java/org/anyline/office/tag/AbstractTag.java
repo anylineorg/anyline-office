@@ -246,16 +246,16 @@ public abstract class AbstractTag implements Tag {
      * @return Object
      */
     protected Object data(boolean filter){
-        Object data = fetchAttributeData("data", " d", "items", " is");
+        Object data = fetchAttributeData("data", "d", "items", "is");
         if(null == data){
             return null;
         }
-        String distinct = fetchAttributeString("distinct", " ds");
-        Integer index = BasicUtil.parseInt(fetchAttributeString("index", " i"), null);
-        Integer begin = BasicUtil.parseInt(fetchAttributeString("begin", "start", " b"), null);
-        Integer end = BasicUtil.parseInt(fetchAttributeString("end", " e"), null);
-        Integer qty = BasicUtil.parseInt(fetchAttributeString("qty", " q"), null);
-        String selector = fetchAttributeString("selector"," st");
+        String distinct = fetchAttributeString("distinct", "ds");
+        Integer index = BasicUtil.parseInt(fetchAttributeString("index", "i"), null);
+        Integer begin = BasicUtil.parseInt(fetchAttributeString("begin", "start", "b"), null);
+        Integer end = BasicUtil.parseInt(fetchAttributeString("end", "e"), null);
+        Integer qty = BasicUtil.parseInt(fetchAttributeString("qty", "q"), null);
+        String selector = fetchAttributeString("selector","st");
 
         if(data instanceof Collection) {
             Collection items = (Collection) data;

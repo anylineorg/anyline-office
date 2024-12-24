@@ -136,10 +136,10 @@ public class For extends AbstractTag implements Tag {
 
         items = data(false);
         var = fetchAttributeString("var");
-        status = fetchAttributeString("status", " s");
-        begin = BasicUtil.parseInt(fetchAttributeString("begin", "start", " b"), 0);
+        status = fetchAttributeString("status", "s");
+        begin = BasicUtil.parseInt(fetchAttributeString("begin", "start", "b"), 0);
         step = BasicUtil.parseInt(fetchAttributeString("step"), 1);
-        end = BasicUtil.parseInt(fetchAttributeString("end", " e"), null);
+        end = BasicUtil.parseInt(fetchAttributeString("end", "e"), null);
 
          if(BasicUtil.isNotEmpty(items)) {//遍历集合
             if(items instanceof String){

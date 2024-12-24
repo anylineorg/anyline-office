@@ -202,7 +202,7 @@ public class TagUtil {
         }
         //ts所在的及之间的所有p(tbl)
         //body部分不要根据t 因为空的p中没有t 要根据w:body.child
-        txt = TagUtil.format(txt);
+        txt = format(txt);
         // 不需要拆分了 split已经拆分完了
         // List<String> tags = RegularUtil.fetchOutTag(txt);
         //标签name如<"+doc.namespace()+":img 中的img
@@ -391,8 +391,9 @@ public class TagUtil {
      * @return boolean
      */
     public static boolean isClose(WDocument doc, String txt){
-        String chk = TagUtil.format(txt).replace("\"", "'");
+        String chk = format(txt).replace("\"", "'");
         chk = chk.replaceAll("'.*?'", "''");
+        chk = chk.replaceAll("\".*?\"", "\"\"");
         //<"+doc.namespace()+":if></"+doc.namespace()+":if> <"+doc.namespace()+":number/>
         if(!chk.contains("<"+doc.namespace()+":") && !chk.contains("</"+doc.namespace()+":")){
             return true;
@@ -417,7 +418,6 @@ public class TagUtil {
         }
         return false;
     }
-
     /**
      * 提取标签名称
      * @param text 文本
@@ -438,7 +438,7 @@ public class TagUtil {
      * @return string
      */
     public static String format(String text){
-        text = text.replace("“", "'").replace("”", "'").replace("’", "'").replace("‘", "'");
+        text = text.replace("“", "\"").replace("”", "\"").replace("’", "'").replace("‘", "'");
         return text;
     }
 
