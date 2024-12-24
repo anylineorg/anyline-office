@@ -362,7 +362,7 @@ public class WDocument extends WElement {
         List<Element> ts = DomUtil.elements(true, box, "t");
         for(Element t:ts){
             String text = t.getText();
-            List<String> list = splitPlaceholder(text);
+            List<String> list = RegularUtil.splitPlaceholder(text);
             int size = list.size();
             if(size > 1) {
                 Element parent = t.getParent();
@@ -382,48 +382,6 @@ public class WDocument extends WElement {
         }
     }
 
-
-    /**
-     * 拆分标签 head body foot 及前后缀拆到独立的t中
-     * @param text text
-     */
-    public static List<String> splitPlaceholder(String text){
-        List<String> list = new ArrayList<>();
-        int fr = 0;
-        while (true){
-            if(text.isEmpty()){
-                break;
-            }
-            int idx = text.indexOf("${", fr);
-            if(idx == -1){
-                list.add(text);
-                break;
-            }
-            if(!text.startsWith("${")){
-                //有前缀
-                String prefix = text.substring(0, idx);
-                if(BasicUtil.isFullString(prefix)){
-                    list.add(prefix);
-                    text = text.substring(idx);
-                    fr = 0;
-                }else{
-                    fr = idx +1;
-                }
-            }else{
-                //以<开头
-                idx = text.indexOf("}", idx);
-                String head = text.substring(0, idx+1);
-                if(BasicUtil.isFullString(head)){
-                    list.add(head);
-                    text = text.substring(idx+1);
-                    fr = 0;
-                }else{
-                    fr = idx +1;
-                }
-            }
-        }
-        return list;
-    }
 
     public void format(){
         format(StandardCharsets.UTF_8);
@@ -1066,10 +1024,9 @@ public class WDocument extends WElement {
         if(null == content){
             return;
         }
-        boolean isblock = DocxUtil.isBlock(content);
         Element startParent = start.getParent();
         Element endParent = end.getParent();
-        if(isblock){
+        if(DocxUtil.isBlock(content)){
             if(startParent == endParent){
                 // 结束标签拆分到下一段落
                 // <start.p><content.p><end.p>
@@ -1133,7 +1090,7 @@ public class WDocument extends WElement {
                 list.add(elements.get(index+i+1));
             }
         }catch (Exception e){
-            log.error("xml格式异常:{}",html);
+            log.error("xml格式异常:{}", html);
             log.error("xml格式异常", e);
         }
         return list;
