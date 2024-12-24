@@ -249,7 +249,7 @@ public class TagUtil {
         }
         List<Element> all = doc.getSrc().elements();
         Element content = contents.get(0);
-        Element top = DocxUtil.getParent(content, "tbl");
+        Element top = null;//DocxUtil.getParent(content, "tbl");
         if(null == top){
             top = DocxUtil.getParent(content, "p");
         }
@@ -257,22 +257,27 @@ public class TagUtil {
         if(fr == -1){
             //有可能是copy出来的不在doc中
             for(Element item:contents){
-                Element tp = DocxUtil.getParent(item, "tbl");
+                Element tp = null;//DocxUtil.getParent(item, "tbl");
                 if(null == tp){
                     tp = DocxUtil.getParent(item, "p");
                 }
-                tops.add(tp);
+                if(null != tp && !tops.contains(tp)) {
+                    tops.add(tp);
+                }
             }
             return tops;
         }
         content = contents.get(contents.size()-1);
-        top = DocxUtil.getParent(content, "tbl");
+        //top = DocxUtil.getParent(content, "tbl");
         if(null == top){
             top = DocxUtil.getParent(content, "p");
         }
         int to = all.indexOf(top);
         for(int i=fr; i<=to; i++){
-            tops.add(all.get(i));
+            Element item = all.get(i);
+            if(null != item && !tops.contains(item)) {
+                tops.add(item);
+            }
         }
         return tops;
     }

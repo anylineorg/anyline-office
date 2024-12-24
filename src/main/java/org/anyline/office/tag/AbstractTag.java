@@ -308,9 +308,6 @@ public abstract class AbstractTag implements Tag {
     protected void output(Object result){
         int size = contents.size();
         Element t = contents.get(0);
-        if(null == result){
-            result = doc.getPlaceholderDefault();
-        }
 
         if(BasicUtil.isNotEmpty(var)){
             context.variable(var, result);
@@ -321,6 +318,9 @@ public abstract class AbstractTag implements Tag {
             pc.variable(var, result);
             DocxUtil.remove(t);
         }else{
+            if(null == result){
+                result = doc.getPlaceholderDefault();
+            }
             t.setText(result.toString());
         }
         if(size > 1) {

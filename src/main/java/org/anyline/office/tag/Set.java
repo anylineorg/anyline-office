@@ -27,17 +27,23 @@ public class Set extends AbstractTag implements Tag{
     }
     public void run(){
         data = data();
+        if(null == data){
+            data = fetchAttributeData("value", "v");
+        }
+        if(BasicUtil.isBoolean(data)){
+            data = BasicUtil.parseBoolean(data, false);
+        }
+        if(BasicUtil.isNumber(data)){
+            data = BasicUtil.parseDecimal(data, null);
+        }
         if(BasicUtil.isEmpty(data) || BasicUtil.isEmpty(var)){
             return;
         }
-
-        if (null != data) {
-            doc.variable(var, data);
-            doc.replace(var, data.toString());
-        }else{
-            doc.replace(var, "");
-            doc.variable(var, null);
+        String str = data .toString();
+        if(str.startsWith("'") && str.startsWith("'")){
+            data = str.substring(1, str.length()-1);
         }
+        output(data);
         DocxUtil.remove(contents);
     }
 }

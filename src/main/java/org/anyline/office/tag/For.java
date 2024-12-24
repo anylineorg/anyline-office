@@ -361,8 +361,11 @@ public class For extends AbstractTag implements Tag {
             }
             last(copy);
         }
-        if(!last().getName().equalsIgnoreCase("p")) {
-            last(DocxUtil.getParent(last(), "p"));
+        if(null != last() && tops().size() > 1) {//如果模板有多行，下一行插入到p之后(换行)
+            if (!last().getName().equalsIgnoreCase("p")) {
+                //如果最后一个 不是p 应该把最上层的p作为最后一个，下次从p后面开始插入
+                last(DocxUtil.getParent(last(), "p"));
+            }
         }
         return list;
     }

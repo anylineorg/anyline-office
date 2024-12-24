@@ -149,7 +149,11 @@ public class Context {
              */
             //${users}
             kk = kk.substring(2, kk.length() - 1).trim();
-            if(kk.startsWith("aov:")){
+            if(BasicUtil.isNumber(kk)){
+                return BasicUtil.parseDecimal(kk, null);
+            } else if(BasicUtil.isBoolean(kk)){
+                return BasicUtil.parseBoolean(kk, false);
+            } else if(kk.startsWith("aov:")){
                 //内置常量
                 String[] tmps = kk.split(":");
                 if(tmps.length > 1){
@@ -221,7 +225,6 @@ public class Context {
                         }
                     }
                 }
-
             }
             data = variables.get(kk);
             if(null == data){

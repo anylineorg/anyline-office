@@ -31,7 +31,9 @@ public class Concat  extends AbstractTag implements Tag{
 		String result = "";
 		try {
 			String split = fetchAttributeString("split", "s");
-
+			if(null == split){
+				split = ",";
+			}
 			data = data();
 			if(data instanceof DataSet){
 				DataSet set = (DataSet) data;

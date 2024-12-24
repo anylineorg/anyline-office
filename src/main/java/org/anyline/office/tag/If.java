@@ -51,15 +51,19 @@ public class If extends AbstractTag implements Tag {
             elseValue = "";
         }
         boolean chk = false;
-        try {
-            OgnlContext ognl = new OgnlContext(null, null, new DefaultOgnlMemberAccess(true));
-            Boolean bol = (Boolean) Ognl.getValue(test, ognl, context.variables());
-            if(null != bol){
-                chk = bol;
+        if(BasicUtil.isBoolean(test)){
+            chk = BasicUtil.parseBoolean(test, false);
+        }else {
+            try {
+                OgnlContext ognl = new OgnlContext(null, null, new DefaultOgnlMemberAccess(true));
+                Boolean bol = (Boolean) Ognl.getValue(test, ognl, context.variables());
+                if (null != bol) {
+                    chk = bol;
+                }
+            } catch (OgnlException e) {
+                log.error("ognl表达式异常:{}", test);
+                e.printStackTrace();
             }
-        } catch (OgnlException e) {
-            log.error("ognl表达式异常:{}", test);
-            e.printStackTrace();
         }
 
 

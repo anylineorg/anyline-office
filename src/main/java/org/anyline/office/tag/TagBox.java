@@ -123,7 +123,7 @@ public class TagBox {
         head.remove();
     }
     public void remove(){
-        remove(true);
+        remove(false);
     }
     public List<Element> contents(){
         return contents;
