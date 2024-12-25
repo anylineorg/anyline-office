@@ -27,6 +27,7 @@ import org.anyline.office.util.TagUtil;
 import org.anyline.util.BasicUtil;
 import org.anyline.util.BeanUtil;
 import org.anyline.util.DomUtil;
+import org.anyline.util.NumberUtil;
 import org.dom4j.Element;
 
 import java.util.*;
@@ -178,6 +179,9 @@ public class For extends AbstractTag implements Tag {
                     if(null == end || end > size-1 || end < 0){
                         end = size-1;
                     }
+                    if(null != fill){
+                        end = NumberUtil.max(end, fill);
+                    }
                     if(begin < 0){
                         begin = 0;
                     }
@@ -187,11 +191,14 @@ public class For extends AbstractTag implements Tag {
                     for (int i = begin; i <= end; i+= step) {
                         map.clear();
                         count ++;
-                        Object item = list.get(i);
-                        if(i<end){
+                        Object item = null;
+                        if(i < size) {
+                            item = list.get(i);
+                        }
+                        if(i<size-1){
                             map.put("next", list.get(i+1));
                         }
-                        if(i>0){
+                        if(i>0 && i<size){
                             map.put("prev", list.get(i-1));
                         }
                         map.put("index", i);
