@@ -38,6 +38,9 @@ public class For extends AbstractTag implements Tag {
     private Integer begin;
     private Integer end;
     private Integer step;
+    private Integer fill; //填充空白行列(数据不足fill条时)
+    private Integer vol;//遍历列时 每行最多几组
+    private Boolean neat;
     public void release(){
         super.release();
         items = null;
@@ -46,6 +49,9 @@ public class For extends AbstractTag implements Tag {
         begin = null;
         end = null;
         step = null;
+        fill = null;
+        vol = null;
+        neat = null;
     }
 
     /**
@@ -140,6 +146,9 @@ public class For extends AbstractTag implements Tag {
         begin = BasicUtil.parseInt(fetchAttributeString("begin", "start", "b"), 0);
         step = BasicUtil.parseInt(fetchAttributeString("step"), 1);
         end = BasicUtil.parseInt(fetchAttributeString("end", "e"), null);
+        fill = BasicUtil.parseInt(fetchAttributeString("fill"), null);
+        vol = BasicUtil.parseInt(fetchAttributeString("vol"), null);
+        neat = BasicUtil.parseBoolean(fetchAttributeString("neat"), false);
 
          if(BasicUtil.isNotEmpty(items)) {//遍历集合
             if(items instanceof String){
@@ -379,7 +388,7 @@ public class For extends AbstractTag implements Tag {
         //找到结束结束标签 删除结束标签及之后的内容
         List<Element> contents = DocxUtil.contents(copy);
         int size = contents.size();
-        for(int i=0; i<size; i++){
+        for(int i=box.foot().index(); i<size; i++){
             Element item = contents.get(i);
             DocxUtil.remove(item);
         }
