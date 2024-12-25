@@ -37,6 +37,7 @@ public abstract class AbstractTag implements Tag {
     protected List<Tag> children = new ArrayList<>();
     protected WDocument doc;
     protected List<Element> contents = new ArrayList<>();
+    protected List<Element> tops = new ArrayList<>();
     protected Context context = new Context();
     protected String text;
     protected String valueKey = ConfigTable.DEFAULT_PRIMARY_KEY;
@@ -54,8 +55,8 @@ public abstract class AbstractTag implements Tag {
         this.context = doc.context().clone();
     }
     public void prepare(){
+        tops = TagUtil.tops(contents);
         box = new TagBox(doc);
-        List<Element> tops = TagUtil.tops(doc, contents);
         TagElement head = new TagElement();
         Element t0 = contents.get(0);
         Element t1 = null;
@@ -133,14 +134,6 @@ public abstract class AbstractTag implements Tag {
         return contents;
     }
 
-    /**
-     * 标签内的wt所在的顶层p或table
-     * 注意如果是与标签在同一个wp中的 设置top=wt
-     * @return list
-     */
-    public List<Element> tops() {
-        return box.tops();
-    }
     /**
      * 设置占位符替换值 在调用save时执行替换<br/>
      * 注意如果不解析的话 不会添加自动${}符号 按原文替换,是替换整个文件的纯文件，包括标签名在内
@@ -354,5 +347,11 @@ public abstract class AbstractTag implements Tag {
         } else {
             this.last = last;
         }
+    }
+    public List<Element> tops(){
+        return tops;
+    }
+    public void tops(List<Element> tops){
+        this.tops = tops;
     }
 }

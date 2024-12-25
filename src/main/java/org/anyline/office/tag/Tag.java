@@ -50,7 +50,6 @@ public interface Tag {
 
     /**
      * 标签内的wt所在的顶层p或table
-     * 注意如果是与标签在同一个wp中的 设置top=wt
      * @return list
      */
     List<Element> tops();

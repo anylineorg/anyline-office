@@ -249,6 +249,31 @@ public class DocxUtil {
     }
 
     /**
+     * 获取element的上一级中第一个标签名=tag的上级
+     * @param element 当前节点
+     * @param tag 上级标签名 如tbl
+     * @return Element
+     */
+    public static Element getParent(List<Element> tops, Element element, String tag){
+        Element p = element.getParent();
+        if(null == tag){
+            return p;
+        }
+        while(true){
+            if(null == p){
+                break;
+            }
+            if(p.getName().equalsIgnoreCase(tag)) {
+                return p;
+            }
+            if(tops.contains(p)){
+                break;
+            }
+            p = p.getParent();
+        }
+        return null;
+    }
+    /**
      * wt列表文本合并
      * @param elements 集合
      * @return String

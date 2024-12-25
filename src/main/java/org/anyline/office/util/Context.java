@@ -20,6 +20,7 @@ import ognl.Ognl;
 import ognl.OgnlContext;
 import org.anyline.adapter.KeyAdapter;
 import org.anyline.entity.DataRow;
+import org.anyline.entity.DataSet;
 import org.anyline.log.Log;
 import org.anyline.log.LogProxy;
 import org.anyline.util.BasicUtil;
@@ -133,20 +134,114 @@ public class Context {
     public String string(String key){
         return string(true, key);
     }
-    public Object data(String key) {
+    public Object data(String key){
+        if(null == key){
+            return null;
+        }
+        //a:b:c:123
+        //a:b:c:'123'
+        //list[list.size-1]
+        //list[0].name
+
+        String kk = key.trim();
+        Object data = null;
+        if(BasicUtil.checkEl(kk)) {
+            kk = kk.substring(2, kk.length() - 1).trim();
+        }
+        if(kk.startsWith("aov:")){
+            return aov(kk);
+        }
+        if(kk.startsWith("{") && kk.endsWith("}")) {
+            kk = kk.replace("{", "").replace("}", "");
+            if(kk.contains(",")){
+                String[] ks = kk.split(",");
+                List<String> list = new ArrayList<>();
+                for(String k:ks){
+                    //{0:关,1:开}
+                    if(k.contains(":")){
+                        String[] kv = k.split(":");
+                        if(kv.length ==2){
+                            Map map = new HashMap();
+                            map.put(kv[0], kv[1]);
+                        }
+                    }else {
+                        //{FI,CO,HR}
+                        list.add(k);
+                    }
+                }
+                data = list;
+            }
+            if(null != data){
+                return data;
+            }
+        }
+        //多变量顺位 取第一个非空
+        if(kk.contains(":")){
+            kk = TagUtil.format(kk);
+            String[] ks = kk.split(":");
+            int len = ks.length;
+            for(int idx = 0; idx <len; idx ++){
+                String k = ks[idx];
+                k = k.trim();
+                if(k.isEmpty()){
+                    continue;
+                }
+                Object v = data(k);
+                if(null != v){
+                    return v;
+                }
+            }
+        }
+        data = variables.get(kk);
+        if(null == data){
+            data = htmls.get(kk);
+        }
+        if(null == data){
+            data = texts.get(kk);
+        }
+        if(null == data){
+            //Collection[index] ognl不支持
+            //list[list.size-1].USER.NAME
+            try{
+                OgnlContext ognl = new OgnlContext(null, null, new DefaultOgnlMemberAccess(true));
+                Map map = new HashMap();
+                for(String k:variables.keySet()){
+                    Object v = variables.get(k);
+                    if(v instanceof DataSet){
+                        v = ((DataSet)v).getRows();
+                    }
+                    map.put(k, v);
+                }
+                data = Ognl.getValue(kk, ognl, map);
+            }catch (Exception ignored){
+            }
+        }
+        if(null == data && null != parent){
+            data = parent.data(key);
+        }
+        if(data instanceof String){
+            String str = (String)data;
+            try {
+                if (str.startsWith("{") && str.endsWith("}")) {
+                    data = DataRow.parseJson(str);
+                }
+                if (str.startsWith("[") && str.endsWith("]")) {
+                    data = DataSet.parseJson(str);
+                }
+            }catch (Exception ignored){
+
+            }
+        }
+        return data;
+    }
+
+    public Object data1(String key) {
         if(null == key){
             return null;
         }
         String kk = key.trim();
         Object data = null;
         if(BasicUtil.checkEl(kk)){
-            /**
-             * 当前时间 ${aov:now}
-             * 随机8位字符${aov:random:8} ${aov:string:8}
-             * 随机8位数字${aov:number:8}
-             * 随机10-100数字${aov:number:10:100}
-             * UUID  ${aov:uuid}
-             */
             //${users}
             kk = kk.substring(2, kk.length() - 1).trim();
             if(BasicUtil.isNumber(kk)){
@@ -154,47 +249,9 @@ public class Context {
             } else if(BasicUtil.isBoolean(kk)){
                 return BasicUtil.parseBoolean(kk, false);
             } else if(kk.startsWith("aov:")){
-                //内置常量
-                String[] tmps = kk.split(":");
-                if(tmps.length > 1){
-                    String var = tmps[1];
-                    //当前时间
-                    //ao:now
-                    if(var.equalsIgnoreCase("now")){
-                        return new Date();
-                    }
-                    //随机字符
-                    if(var.equalsIgnoreCase("random") || var.equalsIgnoreCase("string")){
-                        int len = 8;
-                        if(tmps.length> 2){
-                            //随机8位
-                            //ao:random:8(默认8位)
-                            len = BasicUtil.parseInt(tmps[2], len);
-                        }
-                        return BasicUtil.getRandomString(len);
-                    }
-                    //随机数字
-                    if(var.equalsIgnoreCase("number")){
-                        if(tmps.length> 3){
-                            //随机8位
-                            //ao:number:0:100
-                            int min = BasicUtil.parseInt(tmps[2], 0);
-                            int max = BasicUtil.parseInt(tmps[3], 0);
-                            return BasicUtil.getRandomNumber(min, max);
-                        }
-                        int len = 8;
-                        if(tmps.length> 2){
-                            //随机8位
-                            //ao:number:8(默认8位)
-                            len = BasicUtil.parseInt(tmps[2], len);
-                        }
-                        return BasicUtil.getRandomNumberString(len);
-                    }
-                    if(var.equalsIgnoreCase("uuid")){
-                        return UUID.randomUUID().toString();
-                    }
-                }
+                return aov(kk);
             }else{
+                //多变量顺位 取第一个非空
                 if(kk.contains(":")){
                     kk = TagUtil.format(kk);
                     String[] ks = kk.split(":");
@@ -216,7 +273,7 @@ public class Context {
                                 return k.substring(1, k.length() - 1);
                             }
                             if(BasicUtil.isNumber(k)){
-                                return k;
+                                return BasicUtil.parseInt(k, null);
                             }
                         }
                         Object v = data(k);
@@ -285,27 +342,6 @@ public class Context {
                 }
             }
             if(null == data){
-                //list[0]
-                if(kk.trim().endsWith("]") && kk.contains("[")){
-                    String k = RegularUtil.cut(kk, RegularUtil.TAG_BEGIN, "[").trim();
-                    int idx = BasicUtil.parseInt(RegularUtil.cut(kk,"[", "]"), 0);
-                    data = variables.get(k);
-                    if(data instanceof Collection){
-                        Collection cols = ((Collection)data);
-                        if(idx < cols.size()){
-                            Iterator iter = cols.iterator();
-                            int i = 0;
-                            while (iter.hasNext()){
-                                Object item = iter.next();
-                                if(i == idx){
-                                    data = item;
-                                    break;
-                                }
-                                i ++;
-                            }
-                        }
-                    }
-                }
                 if(kk.contains("+") || kk.contains("-") || kk.contains("*") || kk.contains("/") || kk.contains("%") || kk.contains(">") || kk.contains("<") || kk.contains("=")){
                     try{
                         OgnlContext ognl = new OgnlContext(null, null, new DefaultOgnlMemberAccess(true));
@@ -314,7 +350,7 @@ public class Context {
                     }
                 }
             }
-        }else if(kk.startsWith("{") && kk.endsWith("}")){
+        } else if(kk.startsWith("{") && kk.endsWith("}")) {
             kk = kk.replace("{", "").replace("}", "");
             data = kk;
             if(kk.contains(",")){
@@ -340,6 +376,59 @@ public class Context {
             data = parent.data(key);
         }
         return data;
+    }
+
+    /**
+     * 当前时间 ${aov:now}
+     * 随机8位字符${aov:random:8} ${aov:string:8}
+     * 随机8位数字${aov:number:8}
+     * 随机10-100数字${aov:number:10:100}
+     * UUID  ${aov:uuid}
+     * @param key key
+     * @return Object
+     */
+    private Object aov(String key){
+        //内置常量
+        String[] tmps = key.split(":");
+        if(tmps.length > 1){
+            String var = tmps[1];
+            //当前时间
+            //ao:now
+            if(var.equalsIgnoreCase("now")){
+                return new Date();
+            }
+            //随机字符
+            if(var.equalsIgnoreCase("random") || var.equalsIgnoreCase("string")){
+                int len = 8;
+                if(tmps.length> 2){
+                    //随机8位
+                    //ao:random:8(默认8位)
+                    len = BasicUtil.parseInt(tmps[2], len);
+                }
+                return BasicUtil.getRandomString(len);
+            }
+            //随机数字
+            if(var.equalsIgnoreCase("number")){
+                if(tmps.length> 3){
+                    //随机8位
+                    //ao:number:0:100
+                    int min = BasicUtil.parseInt(tmps[2], 0);
+                    int max = BasicUtil.parseInt(tmps[3], 0);
+                    return BasicUtil.getRandomNumber(min, max);
+                }
+                int len = 8;
+                if(tmps.length> 2){
+                    //随机8位
+                    //ao:number:8(默认8位)
+                    len = BasicUtil.parseInt(tmps[2], len);
+                }
+                return BasicUtil.getRandomNumberString(len);
+            }
+            if(var.equalsIgnoreCase("uuid")){
+                return UUID.randomUUID().toString();
+            }
+        }
+        return null;
     }
     /**
      * 替换占位符

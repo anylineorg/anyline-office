@@ -154,6 +154,7 @@ public class TagUtil {
     public static void parse(WDocument doc, Tag parent, List<Element> box, Context context){
         //全部t标签
         List<Element> contents = DocxUtil.contents(box);
+        List<Element> content_tops = new ArrayList<>(); //box之内的tops
         int size = contents.size();
         for(int i = 0; i < size; i++){
             Element content = contents.get(i);
@@ -183,6 +184,47 @@ public class TagUtil {
                 }
             }
         }
+    }
+
+    /**
+     * 开始和结束标签之间的tops
+     * @param start start
+     * @param end end
+     * @return list
+     */
+    public static List<Element> tops(Element start, Element end){
+        List<Element> tops = new ArrayList<>();
+        Element p = DocxUtil.getParent(start, "p");
+        if(null != p){
+            Element pp = p.getParent();
+            if(null != pp){
+                List<Element> elements = pp.elements();
+                boolean between = false;
+                for(Element element:elements){
+                    if(element == start || DomUtil.contains(element, start)){
+                        between = true;
+                    }
+                    if(between){
+                        tops.add(element);
+                    }
+                    if(element == end || DomUtil.contains(element, end)){
+                        break;
+                    }
+                }
+            }
+        }
+        return tops;
+    }
+    public static List<Element> tops(List<Element> elements){
+        if(null != elements){
+            Element start = elements.get(0);
+            Element end = start;
+            if(elements.size() > 1){
+                end = elements.get(elements.size()-1);
+            }
+            return tops(start, end);
+        }
+        return new ArrayList<>();
     }
 
     /**
@@ -242,24 +284,24 @@ public class TagUtil {
             }*/
         }
     }
-    public static List<Element> tops(WDocument doc, List<Element> contents){
+/*    public static List<Element> tops(WDocument doc, List<Element> roots, List<Element> contents){
         List<Element> tops = new ArrayList<>();
         if(contents.isEmpty()){
             return tops;
         }
         List<Element> all = doc.getSrc().elements();
         Element content = contents.get(0);
-        Element top = null;//DocxUtil.getParent(content, "tbl");
+        Element top = DocxUtil.getParent(roots, content, "tbl");
         if(null == top){
-            top = DocxUtil.getParent(content, "p");
+            top = DocxUtil.getParent(roots, content, "p");
         }
         int fr = all.indexOf(top);
         if(fr == -1){
             //有可能是copy出来的不在doc中
             for(Element item:contents){
-                Element tp = null;//DocxUtil.getParent(item, "tbl");
+                Element tp = DocxUtil.getParent(roots, item, "tbl");
                 if(null == tp){
-                    tp = DocxUtil.getParent(item, "p");
+                    tp = DocxUtil.getParent(roots, item, "p");
                 }
                 if(null != tp && !tops.contains(tp)) {
                     tops.add(tp);
@@ -268,9 +310,9 @@ public class TagUtil {
             return tops;
         }
         content = contents.get(contents.size()-1);
-        //top = DocxUtil.getParent(content, "tbl");
+        top = DocxUtil.getParent(roots, content, "tbl");
         if(null == top){
-            top = DocxUtil.getParent(content, "p");
+            top = DocxUtil.getParent(roots, content, "p");
         }
         int to = all.indexOf(top);
         for(int i=fr; i<=to; i++){
@@ -280,7 +322,7 @@ public class TagUtil {
             }
         }
         return tops;
-    }
+    }*/
 
     public static Tag instance(WDocument doc, String tag){
         Tag instance = null;
