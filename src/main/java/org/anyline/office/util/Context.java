@@ -439,24 +439,21 @@ public class Context {
         String result = text;
         for(String key: htmls.keySet()){
             String value = htmls.get(key);
-            if(null == value){
-                value = "";
+            if(null != value) {
+                result = result.replace("${" + key + "}", value);
             }
-            result = result.replace("${" + key + "}", value);
         }
         for(String key:texts.keySet()){
             String value = texts.get(key);
-            if(null == value){
-                value = "";
+            if(null != value) {
+                result = result.replace("${" + key + "}", value);
             }
-            result = result.replace("${" + key + "}", value);
         }
         for(String key:variables.keySet()){
             Object value = variables.get(key);
-            if(null == value){
-                value = "";
+            if(null != value) {
+                result = result.replace("${" + key + "}", value.toString());
             }
-            result = result.replace("${" + key + "}", value.toString());
         }
         //检测复合占位符
         try {
