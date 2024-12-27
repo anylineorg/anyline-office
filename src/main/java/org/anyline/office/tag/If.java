@@ -73,7 +73,7 @@ public class If extends AbstractTag implements Tag {
                     //如果有value值
                     output(value);
                 } else {
-                    TagUtil.parse(doc, this, box.tops(), context);
+                    TagUtil.run(doc, this, box.tops(), context);
                 }
             } else {
                 //删除body中的tops 除非有else value需要输出
