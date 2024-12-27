@@ -183,6 +183,7 @@ public class Context {
             data = texts.get(kk);
         }
         if(null == data) {
+            //可以有 a:b 格式点位符 先执行上面的get
             //多变量顺位 取第一个非空
             if (kk.contains(":")) {
                 kk = TagUtil.format(kk);
