@@ -28,6 +28,7 @@ import org.anyline.util.BasicUtil;
 import org.anyline.util.BeanUtil;
 import org.anyline.util.DomUtil;
 import org.anyline.util.NumberUtil;
+import org.anyline.util.regular.RegularUtil;
 import org.dom4j.Element;
 
 import java.util.*;
@@ -42,6 +43,20 @@ public class For extends AbstractTag implements Tag {
     private Integer fill; //填充空白行列(数据不足fill条时)
     private Integer vol;//遍历列时 每行最多几组
     private Boolean neat;
+    private boolean remove; //没有数据时 是否删除模板
+    public void prepare(){
+        super.prepare();
+        items = data(false);
+        var = fetchAttributeString("var");
+        status = fetchAttributeString("status", "s");
+        begin = BasicUtil.parseInt(fetchAttributeString("begin", "start", "b"), 0);
+        step = BasicUtil.parseInt(fetchAttributeString("step"), 1);
+        end = BasicUtil.parseInt(fetchAttributeString("end", "e"), null);
+        fill = BasicUtil.parseInt(fetchAttributeString("fill"), null);
+        vol = BasicUtil.parseInt(fetchAttributeString("vol"), null);
+        neat = BasicUtil.parseBoolean(fetchAttributeString("neat"), false);
+        remove = BasicUtil.parseBoolean(fetchAttributeString("remove"), true);
+    }
     public void release(){
         super.release();
         items = null;
@@ -56,6 +71,99 @@ public class For extends AbstractTag implements Tag {
     }
 
     /**
+     * 生成纯文本
+     * @return string
+     */
+    public String parse(){
+        StringBuilder builder = new StringBuilder();
+        if(BasicUtil.isNotEmpty(items)) {//遍历集合
+            if(items instanceof String){
+                String str = (String) items;
+                if(str.startsWith("[")){
+                    if(str.startsWith("[{")){
+                        items = DataSet.parseJson(KeyAdapter.KEY_CASE.SRC, str);
+                    }
+                }else{
+                    items = BeanUtil.array2list(str.split(","));
+                }
+            }
+            if(null != items){
+                if(!(items instanceof Collection)){
+                    log.error("数据源仅支持集合形式:{}", items);
+                    return "";
+                }
+            }
+            if (items instanceof Collection) {
+                Collection cols = (Collection) items;
+                remove = remove && cols.isEmpty();
+                if(!cols.isEmpty()){
+                    Context item_context = context.clone();
+                    Map<String, Object> map = new HashMap<>();
+                    List<Object> list = new ArrayList<>(cols);
+                    int size = list.size();
+                    int count = 0;
+                    if(null == end || end > size-1 || end < 0){
+                        end = size-1;
+                    }
+                    if(null != fill){
+                        end = NumberUtil.max(end, fill);
+                    }
+                    if(begin < 0){
+                        begin = 0;
+                    }
+                    if(begin > size-1){
+                        begin = size -1;
+                    }
+                    for (int i = begin; i <= end; i+= step) {
+                        map.clear();
+                        count ++;
+                        Object item = null;
+                        if(i < size) {
+                            item = list.get(i);
+                        }
+                        if(i<size-1){
+                            map.put("next", list.get(i+1));
+                        }
+                        if(i>0 && i<size){
+                            map.put("prev", list.get(i-1));
+                        }
+                        map.put("index", i);
+                        map.put("count", count);
+                        item_context.variable(var, item);
+                        item_context.variable(status, map);
+                        builder.append(parse(item_context));
+                    }
+                }
+            }
+        }else{//按计数遍历
+            if(null != end){
+                Map<String, Object> map = new HashMap<>();
+                int count = 0;
+                Context item_context = context.clone();
+                for(int i=begin; i<=end; i+=step){
+                    map.clear();
+                    count++;
+                    map.put("index", i);
+                    map.put("count", count);
+                    if(i<end){
+                        map.put("next", i+1);
+                    }
+                    if(i>0){
+                        map.put("prev", i-1);
+                    }
+                    item_context.variable(var, i);
+                    item_context.variable(status, map);
+                    builder.append(parse(item_context));
+                }
+            }
+        }
+        if(null == parent || !(parent instanceof For)){
+            //最外层执行完后清空定位
+            last(null);
+        }
+        return builder.toString();
+    }
+    /**
      * 解析标签
      * 务必注意:与普通标签不同的是，有可能需要控制的是外层tc,tr并且可能是连续的多个
      * 因为tc,tr的外层在word中接触不到所以当前标签只能写在td中
@@ -63,18 +171,6 @@ public class For extends AbstractTag implements Tag {
      * @throws Exception 异常
      */
     public void run() throws Exception {
-        /*<aot:for
-        data或items="${smaples}"
-        item="samp"
-        begin="0"
-        end = "21"
-        vol="3"
-        direction="horizontal"
-        scope="body"
-        compensate="/,-"
-        >${samp.CODE}</al:for>
-        */
-        StringBuilder html = new StringBuilder();
         //提取最外层标签属性 避免取到下一层属性
         String scope = fetchAttributeString("scope", "sp");
 
@@ -121,7 +217,7 @@ public class For extends AbstractTag implements Tag {
         for(Element tc: tcs){
             WTc wtc = WTc.tc(tc);
             if(null == wtc && !reload_table){
-                doc.tables();
+                doc.tables(true);
                 reload_table = true;
                 wtc = WTc.tc(tc);
             }
@@ -132,7 +228,7 @@ public class For extends AbstractTag implements Tag {
         for(Element tr: trs){
             WTr wtr = WTr.tr(tr);
             if(null == wtr && !reload_table){
-                doc.tables();
+                doc.tables(true);
                 reload_table = true;
                 wtr = WTr.tr(tr);
             }
@@ -140,16 +236,6 @@ public class For extends AbstractTag implements Tag {
                 wtrs.add(wtr);
             }
         }
-
-        items = data(false);
-        var = fetchAttributeString("var");
-        status = fetchAttributeString("status", "s");
-        begin = BasicUtil.parseInt(fetchAttributeString("begin", "start", "b"), 0);
-        step = BasicUtil.parseInt(fetchAttributeString("step"), 1);
-        end = BasicUtil.parseInt(fetchAttributeString("end", "e"), null);
-        fill = BasicUtil.parseInt(fetchAttributeString("fill"), null);
-        vol = BasicUtil.parseInt(fetchAttributeString("vol"), null);
-        neat = BasicUtil.parseBoolean(fetchAttributeString("neat"), false);
 
          if(BasicUtil.isNotEmpty(items)) {//遍历集合
             if(items instanceof String){
@@ -218,16 +304,6 @@ public class For extends AbstractTag implements Tag {
                             body(item_context);
                         }
                     }
-                    //删除模板列、行、表
-                    for(WTc tc: wtcs){
-                        tc.remove();
-                    }
-                    for(WTr tr: wtrs){
-                        tr.remove();
-                    }
-                    if(null != wtable){
-                        wtable.remove();
-                    }
                 }
             }
         }else{//按计数遍历
@@ -262,7 +338,19 @@ public class For extends AbstractTag implements Tag {
                 }
             }
         }
-         box.remove();
+         if(remove) {
+             box.remove();
+             //删除模板列、行、表
+             for (WTc tc : wtcs) {
+                 tc.remove();
+             }
+             for (WTr tr : wtrs) {
+                 tr.remove();
+             }
+             if (null != wtable) {
+                 wtable.remove();
+             }
+         }
          if(null == parent || !(parent instanceof For)){
              //最外层执行完后清空定位
             last(null);
@@ -287,7 +375,7 @@ public class For extends AbstractTag implements Tag {
             news.add(copy.getSrc());
             c++;
         }
-        TagUtil.parse(doc, this, news, context);
+        TagUtil.run(doc, this, news, context);
         doc.replace(news, context);
     }
     private void tr(int index, List<WTr> templates, Context context) throws Exception{
@@ -300,7 +388,7 @@ public class For extends AbstractTag implements Tag {
             news.add(copy.getSrc());
             r ++;
         }
-        TagUtil.parse(doc, this, news, context);
+        TagUtil.run(doc, this, news, context);
         doc.replace(news, context);
     }
     private void table(WTable template, Context context){
@@ -309,9 +397,22 @@ public class For extends AbstractTag implements Tag {
         }
         WTable copy = template.clone(true);
         DocxUtil.after(copy.getSrc(), last());
-        TagUtil.parse(doc, this, copy, context);
+        TagUtil.run(doc, this, copy, context);
         doc.replace(copy, context);
         last(copy.getSrc());
+    }
+    private String parse(Context context) {
+        StringBuilder builder = new StringBuilder();
+        try {
+            String body = RegularUtil.fetchTagBody(text, doc.namespace()+":for");
+            body = TagUtil.parse(doc, body, context);
+            body = context.placeholder(body);
+            builder.append(body);
+        }catch (Exception e){
+            log.error("[text 解析异常]\n[template:{}]", text);
+            e.printStackTrace();
+        }
+        return builder.toString();
     }
     private void body(Context context) {
         List<Element> templates = box.templates();
@@ -330,7 +431,7 @@ public class For extends AbstractTag implements Tag {
             }
         }
         try {
-            TagUtil.parse(doc, this, news, context);
+            TagUtil.run(doc, this, news, context);
             doc.replace(news, context);
         }catch (Exception e){
             log.error("[body 解析异常]\n[template:{}]", DocxUtil.text(templates));
