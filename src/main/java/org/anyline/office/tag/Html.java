@@ -28,8 +28,8 @@ public class Html extends AbstractTag implements Tag{
 	}
 	public void run() {
 		try {
-			body = TagUtil.format(body);
 			body = TagUtil.parse(doc, tops, context);
+			body = TagUtil.format(body);
 			body = context.placeholder(body);
 			doc.parseHtml(box.tops().get(0), box.head().element(), body);
 			box.remove(true);
