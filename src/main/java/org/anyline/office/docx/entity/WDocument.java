@@ -75,6 +75,7 @@ public class WDocument extends WElement {
     private int listNum = 0;
     //标签命名空间<aot:for/>
     private String namespace = "aol";
+    private String aoiHost = null;
 
 
     /**
@@ -130,26 +131,30 @@ public class WDocument extends WElement {
                     charts.put(name, DocumentHelper.parseText(ZipUtil.read(file, item, charset)));
                 }
             }
-            tags.put("agg", Agg.class);
-            tags.put("avg", Avg.class);
-            tags.put("checkbox", CheckBox.class);
-            tags.put("concat", Concat.class);
-            tags.put("date", DateFormat.class);
-            tags.put("for", For.class);
-            tags.put("group", Group.class);
-            tags.put("if", If.class);
-            tags.put("img", Img.class);
-            tags.put("max", Max.class);
-            tags.put("min", Min.class);
-            tags.put("money", MoneyFormat.class);
-            tags.put("number", NumberFormat.class);
-            tags.put("select", Select.class);
-            tags.put("set", Set.class);
-            tags.put("sum", Sum.class);
-            tags.put("mark", Mark.class);
+            reg("agg", Agg.class);
+            reg("avg", Avg.class);
+            reg("checkbox", CheckBox.class);
+            reg("concat", Concat.class);
+            reg("date", DateFormat.class);
+            reg("for", For.class);
+            reg("group", Group.class);
+            reg("if", If.class);
+            reg("img", Img.class);
+            reg("max", Max.class);
+            reg("min", Min.class);
+            reg("money", MoneyFormat.class);
+            reg("number", NumberFormat.class);
+            reg("select", Select.class);
+            reg("set", Set.class);
+            reg("sum", Sum.class);
+            reg("mark", Mark.class);
+            reg("html", Html.class);
         }catch (Exception e){
             log.error("加载失败", e);
         }
+    }
+    public void reg(String name, Class<? extends Tag> clazz){
+        tags.put(name, clazz);
     }
     public Tag tag(String name){
         if(null == name){
@@ -202,7 +207,12 @@ public class WDocument extends WElement {
     public void namespace(String namespace) {
         this.namespace = namespace;
     }
-
+    public void aoiHost(String host){
+        this.aoiHost = host;
+    }
+    public String aoiHost(){
+        return aoiHost;
+    }
     public void loadStyle(String html){
         Map<String,Map<String, String>> map = StyleParser.load(html);
         for(String key:map.keySet()){
@@ -265,7 +275,7 @@ public class WDocument extends WElement {
             //解析预定义标签
             predefine();
             //替换占位符前先解析标签
-            parseTag();
+            runTag();
             //执行替换
             replace(src, context);
             Map<String, String> zip_replaces = new HashMap<>();
@@ -415,8 +425,8 @@ public class WDocument extends WElement {
     /**
      * 替换占位符前 先解析标签
      */
-    public void parseTag(){
-        TagUtil.parse(this,  null, src, context);
+    public void runTag(){
+        TagUtil.run(this,  null, src, context);
     }
     public String ref(String id){
         return predefines.get(id);
@@ -1601,10 +1611,13 @@ public class WDocument extends WElement {
             }
         }
         //占位符
-        if(src.startsWith("${")){
-            String key = src.substring(2, src.length() - 1);
-            src = context.replaces().get(key);
+        if(src.contains("${")){
+            src = context.placeholder(src);
         }
+        if(BasicUtil.isEmpty(src)){
+            return null;
+        }
+        src = src.trim();
         File tmpdir = new File(System.getProperty("java.io.tmpdir"));
         File img = null;
         try {
@@ -1612,10 +1625,14 @@ public class WDocument extends WElement {
             if(RegularUtil.isUrl(src)) {
                 img = new File(tmpdir,"image" + rdm + "." + subfix);
                 if(null != downloader){
-                    downloader.download(src, img);
+                    boolean result = downloader.download(src, img);
+                    if(!result){
+                        log.error("[图片文件下载失败:{}]", src);
+                        return null;
+                    }
                     //HttpUtil.download(src, img);
                 }else{
-                    log.error("未提供 downloader,无法下载:{}", src);
+                    log.error("[图片文件下载失败:{}][未提供downloader]", src);
                 }
             }else{
                 // 本地图片
@@ -1624,6 +1641,11 @@ public class WDocument extends WElement {
                 }
                 img = new File(src);
             }
+            if(null == img || !img.exists()){
+                log.error("[图片文件不存在:{}]", src);
+                return null;
+            }
+            src = src.trim();
             Map<String,File> map = new HashMap<>();
             map.put("word/media/"+img.getName(),img);
             ZipUtil.append(map, file);
@@ -1637,6 +1659,7 @@ public class WDocument extends WElement {
             imgRel.addAttribute("Id",rId);
             imgRel.addAttribute("Type","http://schemas.openxmlformats.org/officeDocument/2006/relationships/image");
             imgRel.addAttribute("Target","media/"+img.getName());
+
         }catch (Exception e){
             log.error("生成图片异常", e);
         }
@@ -1830,9 +1853,12 @@ public class WDocument extends WElement {
                     if(pname.equalsIgnoreCase("tc")){
                         box = parent;
                         pr(box, styles);
-                    }else if(pname.equalsIgnoreCase("p")){
+                    }/*
+                    //table另起一行 不在当前段落中
+                    else if(pname.equalsIgnoreCase("p")){
+
                         box = parent.addElement("w:r");
-                    }else{
+                    }*/else{
                         box = doc.getRootElement().element("body");
                         // 新建一个段落
                     }
@@ -1852,7 +1878,9 @@ public class WDocument extends WElement {
                     }
                 }else if("img".equalsIgnoreCase(tag)){
                     Element img = img(parent, prev, element, styles);
-                    prev = img;
+                    if(null != img) {
+                        prev = img;
+                    }
                 }else if("word".equalsIgnoreCase(tag)){
                     Element word = word(parent, prev, element, styles);
                     prev = word;
