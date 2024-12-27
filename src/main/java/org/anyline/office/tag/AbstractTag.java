@@ -57,33 +57,41 @@ public abstract class AbstractTag implements Tag {
     public void prepare(){
         tops = TagUtil.tops(contents);
         box = new TagBox(doc);
-        TagElement head = new TagElement();
-        Element t0 = contents.get(0);
-        Element t1 = null;
-        head.element(t0);
-        List<Element> head_contents = DocxUtil.contents(tops.get(0));
-        int index = head_contents.indexOf(t0);
-        head.index(index);
-        head.first(index == 0);
-        head.last(index == head_contents.size()-1);
-        head.text(t0.getText());
-        t0.setText("");
-        box.head(head);
         box.contents(contents);
-        if(this.contents.size() > 0){
-            t1 = this.contents.get(this.contents.size()-1);
-            TagElement foot = new TagElement();
-            foot.element(t1);
-            // foot在top中的下标 注意区分是在首行(中有一行)还是尾行
-            List<Element> foot_contents = DocxUtil.contents(tops.get(tops.size()-1));
-            index = foot_contents.indexOf(t1);
-            foot.index(index);
-            foot.first(index == 0);
-            foot.last(index == foot_contents.size()-1);
-            foot.text(t1.getText());
-            t1.setText("");
-            box.foot(foot);
+        TagElement head = new TagElement();
+        TagElement foot = new TagElement();
+        box.head(head);
+        Element t0 = null;
+        Element t1 = null;
+        if(!contents.isEmpty()){
+            t0 = contents.get(0);
+            head.element(t0);
+            List<Element> head_contents = DocxUtil.contents(tops.get(0));
+            int index = head_contents.indexOf(t0);
+            head.index(index);
+            head.first(index == 0);
+            head.last(index == head_contents.size()-1);
+            head.text(t0.getText());
+            t0.setText("");
+
+            if(this.contents.size() > 0){
+                t1 = this.contents.get(this.contents.size()-1);
+                foot.element(t1);
+                // foot在top中的下标 注意区分是在首行(中有一行)还是尾行
+                List<Element> foot_contents = DocxUtil.contents(tops.get(tops.size()-1));
+                index = foot_contents.indexOf(t1);
+                foot.index(index);
+                foot.first(index == 0);
+                foot.last(index == foot_contents.size()-1);
+                foot.text(t1.getText());
+                t1.setText("");
+                box.foot(foot);
+            }
+        }else{
+            String head_text = RegularUtil.fetchTagHead(text);
+            head.text(head_text);
         }
+
         box.tops(tops);
         String vk = fetchAttributeString("valueKey", "vk");
         if(BasicUtil.isNotEmpty(vk)){
@@ -102,6 +110,10 @@ public abstract class AbstractTag implements Tag {
         contents.clear();
         children.clear();
         context = new Context();
+    }
+    @Override
+    public String parse() throws Exception {
+        return "";
     }
     public void ref(String ref){
         this.ref = ref;

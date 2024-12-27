@@ -117,7 +117,7 @@ public class TagUtil {
                 break;
             }
             if(!text.startsWith("<")){
-                //有前缀
+                //有前缀a<aol:   中a部分
                 String prefix = text.substring(0, idx);
                 if(BasicUtil.isFullString(prefix)){
                     list.add(prefix);
@@ -129,6 +129,11 @@ public class TagUtil {
             }else{
                 //以<开头
                 idx = text.indexOf(">", idx);
+                if(idx == -1){
+                    //没有结尾
+                    list.add(text);
+                    break;
+                }
                 String head = text.substring(0, idx+1);
                 if(BasicUtil.isFullString(head)){
                     list.add(head);
@@ -141,25 +146,24 @@ public class TagUtil {
         }
         return list;
     }
-    public static void parse(WDocument doc, Tag parent, Element box, Context context){
+    public static void run(WDocument doc, Tag parent, Element box, Context context){
         List<Element> list = new ArrayList<>();
         list.add(box);
-        parse(doc, parent, list, context);
+        run(doc, parent, list, context);
     }
-    public static void parse(WDocument doc, Tag parent, WElement box, Context context){
+    public static void run(WDocument doc, Tag parent, WElement box, Context context){
         List<Element> list = new ArrayList<>();
         list.add(box.getSrc());
-        parse(doc, parent, list, context);
+        run(doc, parent, list, context);
     }
-    public static void parse(WDocument doc, Tag parent, List<Element> box, Context context){
+    public static void run(WDocument doc, Tag parent, List<Element> box, Context context){
         //全部t标签
         List<Element> contents = DocxUtil.contents(box);
-        List<Element> content_tops = new ArrayList<>(); //box之内的tops
         int size = contents.size();
         for(int i = 0; i < size; i++){
             Element content = contents.get(i);
             String txt = content.getText();
-            if(txt.contains("<")){
+            if(txt.contains("<"+doc.namespace())){
                 List<Element> items = new ArrayList<>(); //tag head body foot所在的t
                 items.add(content);
                 if(!RegularUtil.isFullTag(txt)){//如果不是完整标签(需要有开始和结束或自闭合)继续拼接下一个直到完成或失败
@@ -176,7 +180,7 @@ public class TagUtil {
                 }
                 if(RegularUtil.isFullTag(txt)){
                     try {
-                        parse(doc, parent, items, txt, context);
+                        run(doc, parent, items, txt, context);
                     }catch (Exception e){
                         log.error("解析异常:{}", txt);
                         e.printStackTrace();
@@ -185,6 +189,64 @@ public class TagUtil {
             }
         }
     }
+
+    /**
+     * 解析标签生成文本
+     * @param doc WDocument
+     * @param box box
+     * @param context context
+     * @return string
+     */
+    public static String parse(WDocument doc, List<Element> box, Context context){
+        return parse(doc, DocxUtil.text(box), context);
+    }
+    public static String parse(WDocument doc, String text, Context context){
+        StringBuilder builder = new StringBuilder();
+        List<String> tags = RegularUtil.fetchOutTag(text, doc.namespace());
+        List<String> splits = split(text, tags);
+        for(String split:splits){
+            if(split.startsWith("<"+doc.namespace()+":")){
+                Tag instance = instance(doc, split);
+                //复制占位值
+                instance.init(doc);
+                instance.text(split);
+                instance.context(context);
+                //把 "+doc.namespace()+"标签解析成html标签 下一步会解析html标签
+                instance.prepare();
+                try {
+                    builder.append(instance.parse());
+                }catch (Exception e){
+
+                }
+            }else{
+                builder.append(split);
+            }
+        }
+        return builder.toString();
+    }
+
+    /**
+     * 把标签和标签中间的其他内容拆分开
+     * a,tag,b,tag,c
+     * @param text txt
+     * @param tags tags
+     * @return list
+     */
+    private static List<String> split(String text, List<String> tags){
+        List<String> list = new ArrayList<>();
+        for(String tag:tags){
+            int idx = text.indexOf(tag);
+            if(idx != 0){
+                String prefix = text.substring(0, idx);
+                list.add(prefix);
+            }
+            text = text.substring(idx + tag.length());
+            list.add(tag);
+        }
+        list.add(text);
+        return list;
+    }
+
 
     /**
      * 开始和结束标签之间的tops
@@ -216,7 +278,7 @@ public class TagUtil {
         return tops;
     }
     public static List<Element> tops(List<Element> elements){
-        if(null != elements){
+        if(null != elements && !elements.isEmpty()){
             Element start = elements.get(0);
             Element end = start;
             if(elements.size() > 1){
@@ -235,7 +297,7 @@ public class TagUtil {
      * @param context context
      * @throws Exception 解析异常
      */
-    public static void parse(WDocument doc, Tag parent, List<Element> contents, String txt, Context context) throws Exception{
+    public static void run(WDocument doc, Tag parent, List<Element> contents, String txt, Context context) throws Exception{
         if(null == txt){
             return;
         }
@@ -248,7 +310,7 @@ public class TagUtil {
         // 不需要拆分了 split已经拆分完了
         // List<String> tags = RegularUtil.fetchOutTag(txt);
         //标签name如<"+doc.namespace()+":img 中的img
-        String name = name(txt, ""+doc.namespace()+":");
+        String name = name(txt, doc.namespace()+":");
 
         boolean isPre = false;
         if("pre".equals(name)){
@@ -261,7 +323,6 @@ public class TagUtil {
                 isPre = true;
             }
         }
-        String html = "";
         if(!isPre) {
             Tag instance = instance(doc, txt);
             if (null != instance) {
@@ -283,6 +344,54 @@ public class TagUtil {
                 txt = parseTag(txt, variables);
             }*/
         }
+    }
+    /**
+     * 解析标签 生成文本
+     * @param doc doc
+     * @param contents 标签所在的全部可见内容
+     * @param txt 标签文本
+     * @param context context
+     * @throws Exception 解析异常
+     */
+    public static String parse(WDocument doc, List<Element> contents, String txt, Context context) throws Exception{
+        if(null == txt){
+            return "";
+        }
+        if(contents.isEmpty()){
+            return "";
+        }
+        //ts所在的及之间的所有p(tbl)
+        //body部分不要根据t 因为空的p中没有t 要根据w:body.child
+        txt = format(txt);
+        // 不需要拆分了 split已经拆分完了
+        // List<String> tags = RegularUtil.fetchOutTag(txt);
+        //标签name如<"+doc.namespace()+":img 中的img
+        String name = name(txt, doc.namespace()+":");
+
+        boolean isPre = false;
+        if("pre".equals(name)){
+            //<"+doc.namespace()+":pre id="c"/>
+            isPre = true;
+        }else{
+            //<"+doc.namespace()+":date pre="c"
+            String preId = RegularUtil.fetchAttributeValue(txt, "pre");
+            if(null != preId){
+                isPre = true;
+            }
+        }
+        if(!isPre) {
+            Tag instance = instance(doc, txt);
+            if (null != instance) {
+                //复制占位值
+                instance.init(doc);
+                instance.text(txt);
+                instance.contents(contents);
+                instance.context(context);
+                instance.prepare();
+                return instance.parse();
+            }
+        }
+        return "";
     }
 /*    public static List<Element> tops(WDocument doc, List<Element> roots, List<Element> contents){
         List<Element> tops = new ArrayList<>();
@@ -329,7 +438,7 @@ public class TagUtil {
         if(null == tag || !tag.contains("<"+doc.namespace()+":")){
             return null;
         }
-        String name = name(tag, ""+doc.namespace()+":");
+        String name = name(tag, doc.namespace()+":");
         String parse = tag; //解析的标签体
         //先执行外层的 外层需要设置新变量值
         if (null == name) {
@@ -352,7 +461,7 @@ public class TagUtil {
                 //<"+doc.namespace()+":c/>
                 //<"+doc.namespace()+":date ref="c" format="" value=""/>
                 parse = define;
-                name = name(parse, ""+doc.namespace()+":");
+                name = name(parse, doc.namespace()+":");
                 if (null == name) {
                     log.error("未识别的标签格式:{}", parse);
                 } else {
@@ -375,7 +484,8 @@ public class TagUtil {
     public static List<Element> next(WDocument doc, String start, List<Element> items, int index){
         List<Element> list = new ArrayList<>();
         int size = items.size();
-        String full = "<"+RegularUtil.cut(start, "<", RegularUtil.TAG_END);
+        String flag = "<"+doc.namespace();
+        String full = flag+RegularUtil.cut(start, flag, RegularUtil.TAG_END);
         for(int i=index; i<size; i++){
             Element item = items.get(i);
             list.add(item);
@@ -392,7 +502,12 @@ public class TagUtil {
                     //不是标签
                     return new ArrayList<>();
                 }
-                name = RegularUtil.cut(full, ""+doc.namespace()+":", " ");
+                name = RegularUtil.cut(full, doc.namespace()+":", " ");
+                //有不带属性的标签
+                String sname = RegularUtil.cut(full, doc.namespace()+":", ">");
+                if(null != name && null != sname && sname.length() < name.length()){
+                    name = sname;
+                }
             }
             if(null != name){
                 String head ="<"+doc.namespace()+":" + name;
@@ -465,14 +580,20 @@ public class TagUtil {
         }
         return false;
     }
+
     /**
      * 提取标签名称
      * @param text 文本
-     * @param prefix 前缀
+     * @param prefix 前缀 aol:
      * @return name
      */
     public static String name(String text, String prefix){
-        String name = RegularUtil.cut(text, prefix, " ");;
+        String name = RegularUtil.cut(text, prefix, " ");
+        //有不带属性的标签
+        String sname = RegularUtil.cut(text, prefix, ">");
+        if(null != name && null != sname && sname.length() < name.length()){
+            name = sname;
+        }
         if(null == name){
             name = RegularUtil.cut(text, prefix, "/");
         }
@@ -485,7 +606,10 @@ public class TagUtil {
      * @return string
      */
     public static String format(String text){
-        text = text.replace("“", "\"").replace("”", "\"").replace("’", "'").replace("‘", "'");
+        text = text.replace("“", "\"")
+            .replace("”", "\"")
+            .replace("’", "'")
+            .replace("‘", "'");
         return text;
     }
 

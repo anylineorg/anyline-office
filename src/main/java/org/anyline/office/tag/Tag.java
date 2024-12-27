@@ -32,6 +32,13 @@ public interface Tag {
     void context(Context context);
     Context context();
     void run() throws Exception;
+
+    /**
+     * 解析标签生成纯文本
+     * @return String
+     * @throws Exception
+     */
+    String parse() throws Exception;
     String ref();
     void ref(String ref);
     default Element content() {

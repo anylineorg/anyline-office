@@ -22,6 +22,10 @@ public class Agg extends AbstractTag implements Tag{
     public void run() throws Exception {
 
     }
+    @Override
+    public String parse() throws Exception {
+        return "";
+    }
 
     public void release(){
         super.release();
