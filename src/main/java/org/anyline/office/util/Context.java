@@ -18,7 +18,6 @@ package org.anyline.office.util;
 
 import ognl.Ognl;
 import ognl.OgnlContext;
-import org.anyline.adapter.KeyAdapter;
 import org.anyline.entity.DataRow;
 import org.anyline.entity.DataSet;
 import org.anyline.log.Log;
@@ -175,29 +174,32 @@ public class Context {
                 return data;
             }
         }
-        //多变量顺位 取第一个非空
-        if(kk.contains(":")){
-            kk = TagUtil.format(kk);
-            String[] ks = kk.split(":");
-            int len = ks.length;
-            for(int idx = 0; idx <len; idx ++){
-                String k = ks[idx];
-                k = k.trim();
-                if(k.isEmpty()){
-                    continue;
-                }
-                Object v = data(k);
-                if(null != v){
-                    return v;
-                }
-            }
-        }
+
         data = variables.get(kk);
         if(null == data){
             data = htmls.get(kk);
         }
         if(null == data){
             data = texts.get(kk);
+        }
+        if(null == data) {
+            //多变量顺位 取第一个非空
+            if (kk.contains(":")) {
+                kk = TagUtil.format(kk);
+                String[] ks = kk.split(":");
+                int len = ks.length;
+                for (int idx = 0; idx < len; idx++) {
+                    String k = ks[idx];
+                    k = k.trim();
+                    if (k.isEmpty()) {
+                        continue;
+                    }
+                    Object v = data(k);
+                    if (null != v) {
+                        return v;
+                    }
+                }
+            }
         }
         if(null == data){
             //Collection[index] ognl不支持
@@ -216,9 +218,6 @@ public class Context {
             }catch (Exception ignored){
             }
         }
-        if(null == data && null != parent){
-            data = parent.data(key);
-        }
         if(data instanceof String){
             String str = (String)data;
             try {
@@ -232,151 +231,12 @@ public class Context {
 
             }
         }
-        return data;
-    }
-
-    public Object data1(String key) {
-        if(null == key){
-            return null;
-        }
-        String kk = key.trim();
-        Object data = null;
-        if(BasicUtil.checkEl(kk)){
-            //${users}
-            kk = kk.substring(2, kk.length() - 1).trim();
-            if(BasicUtil.isNumber(kk)){
-                return BasicUtil.parseDecimal(kk, null);
-            } else if(BasicUtil.isBoolean(kk)){
-                return BasicUtil.parseBoolean(kk, false);
-            } else if(kk.startsWith("aov:")){
-                return aov(kk);
-            }else{
-                //多变量顺位 取第一个非空
-                if(kk.contains(":")){
-                    kk = TagUtil.format(kk);
-                    String[] ks = kk.split(":");
-                    int len = ks.length;
-                    for(int idx = 0; idx <len; idx ++){
-                        String k = ks[idx];
-                        k = k.trim();
-                        if(k.isEmpty()){
-                            continue;
-                        }
-                        if(idx == len -1) {
-                            //最后一位默认值
-                            //${v1:v2:'abc'}
-                            //${v1:v2:123}
-                            if (k.startsWith("'") && k.endsWith("'")) {
-                                return k.substring(1, k.length() - 1);
-                            }
-                            if (k.startsWith("\"") && k.endsWith("\"")) {
-                                return k.substring(1, k.length() - 1);
-                            }
-                            if(BasicUtil.isNumber(k)){
-                                return BasicUtil.parseInt(k, null);
-                            }
-                        }
-                        Object v = data(k);
-                        if(null != v){
-                            return v;
-                        }
-                    }
-                }
-            }
-            data = variables.get(kk);
-            if(null == data){
-                data = htmls.get(kk);
-            }
-            if(null == data){
-                data = texts.get(kk);
-            }
-            if(null == data){
-                if(kk.contains(".")){
-                    //user.dept.name
-                    //user[0].name
-                    String[] ks = kk.split("\\.");
-                    int size = ks.length;
-                    if(size > 1) {
-                        data = data("${"+ks[0]+"}");
-                        for (int i = 1; i < size; i++) {
-                            String k = ks[i];
-                            if(null == data){
-                                break;
-                            }
-
-                            if(data instanceof Collection){
-                                Collection cols = ((Collection)data);
-                                if("size".equals(k)){
-                                    data = cols.size();
-                                }else if("empty".equals(k)){
-                                    data = cols.isEmpty();
-                                }
-                            } else if(data instanceof Map){
-                                Map map = ((Map)data);
-                                if("size".equals(k)){
-                                    data = map.size();
-                                }else if("empty".equals(k)){
-                                    data = map.isEmpty();
-                                }else{
-                                    if(data instanceof DataRow){
-                                        data = ((DataRow)data).get(k);
-                                    }else {
-                                        data = map.get(k);
-                                    }
-                                }
-                            }else {
-                                if(data instanceof String){
-                                    String str = (String)data;
-                                    if(str.startsWith("{") && str.endsWith("}")){
-                                        try{
-                                            data = DataRow.parseJson(KeyAdapter.KEY_CASE.SRC, str);
-                                        }catch (Exception e){
-                                            e.printStackTrace();
-                                        }
-                                    }
-                                }
-                                data = BeanUtil.getFieldValue(data, k);
-                            }
-                        }
-                    }
-                }
-            }
-            if(null == data){
-                if(kk.contains("+") || kk.contains("-") || kk.contains("*") || kk.contains("/") || kk.contains("%") || kk.contains(">") || kk.contains("<") || kk.contains("=")){
-                    try{
-                        OgnlContext ognl = new OgnlContext(null, null, new DefaultOgnlMemberAccess(true));
-                        data = Ognl.getValue(kk, ognl, variables);
-                    }catch (Exception ignored){
-                    }
-                }
-            }
-        } else if(kk.startsWith("{") && kk.endsWith("}")) {
-            kk = kk.replace("{", "").replace("}", "");
-            data = kk;
-            if(kk.contains(",")){
-                String[] ks = kk.split(",");
-                List<String> list = new ArrayList<>();
-                for(String k:ks){
-                    //{0:关,1:开}
-                    if(k.contains(":")){
-                        String[] kv = k.split(":");
-                        if(kv.length ==2){
-                            Map map = new HashMap();
-                            map.put(kv[0], kv[1]);
-                        }
-                    }else {
-                        //{FI,CO,HR}
-                        list.add(k);
-                    }
-                }
-                data = list;
-            }
-        }
         if(null == data && null != parent){
             data = parent.data(key);
         }
         return data;
     }
+
 
     /**
      * 当前时间 ${aov:now}
@@ -437,25 +297,7 @@ public class Context {
      */
     public String placeholder(String text){
         String result = text;
-        for(String key: htmls.keySet()){
-            String value = htmls.get(key);
-            if(null != value) {
-                result = result.replace("${" + key + "}", value);
-            }
-        }
-        for(String key:texts.keySet()){
-            String value = texts.get(key);
-            if(null != value) {
-                result = result.replace("${" + key + "}", value);
-            }
-        }
-        for(String key:variables.keySet()){
-            Object value = variables.get(key);
-            if(null != value) {
-                result = result.replace("${" + key + "}", value.toString());
-            }
-        }
-        //检测复合占位符
+        //检测复合占位符 a${b}c
         try {
             List<String> ks = RegularUtil.fetch(result, "\\$\\{.*?\\}");
             for(String k:ks){
@@ -463,20 +305,12 @@ public class Context {
                 if(null == value){
                     value = "";
                 }
-                if(BasicUtil.isEmpty(value)){
-                    if(k.startsWith("${__")){
-                        continue;
-                    }
-                }
                 result = result.replace(k, value.toString());
             }
         }catch (Exception e){
             e.printStackTrace();
         }
         if(null == result){
-            if(text.startsWith("__")){
-                return text;
-            }
             result = "";
         }
         return result;
