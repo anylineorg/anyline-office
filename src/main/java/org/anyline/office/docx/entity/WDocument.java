@@ -73,7 +73,7 @@ public class WDocument extends WElement {
      */
     private Downloader downloader;
     private int listNum = 0;
-    //标签命名空间<aot:for/>
+    //标签命名空间<aol:for/>
     private String namespace = "aol";
     private String aoiHost = null;
 
@@ -444,6 +444,7 @@ public class WDocument extends WElement {
             Element t = ts.get(i);
             String txt = t.getText();
             if(txt.contains("<")){
+                boolean is_pre = false;
                 List<Element> items = new ArrayList<>();
                 items.add(t);
                 if(!RegularUtil.isFullTag(txt)){//如果不是完整标签 继续拼接下一个直到完成或失败
@@ -459,23 +460,28 @@ public class WDocument extends WElement {
                 try {
                     List<String> tags = RegularUtil.fetchOutTag(txt);
                     for(String tag:tags){
-                        //<aot:pre id="a"/>
-                        //<aot:date pre="b"/>
+                        //<aol:pre id="a"/>
+                        //<aol:date pre="b"/>
                         tag = TagUtil.format(tag).trim();
                         String pre = RegularUtil.fetchAttributeValue(tag, "pre");
-                        String name = RegularUtil.cut(namespace + ":", " ");
+                        String name = RegularUtil.cut(tag, namespace + ":", " ");
                         if(null == name){
-                            name = RegularUtil.cut(namespace + ":", "/>");
+                            name = RegularUtil.cut(tag, namespace + ":", "/>");
                         }
                         if("pre".equals(name)){
                             pre = RegularUtil.fetchAttributeValue(tag, "id");
                         }
                         if(null != pre) {
+                            is_pre = true;
                             predefines.put(pre, tag);
                         }
                     }
                 }catch (Exception e){
                     log.error("解析预定义标签异常", e);
+                }finally {
+                    if(is_pre) {
+                        DocxUtil.remove(items);
+                    }
                 }
             }
         }
@@ -1630,7 +1636,6 @@ public class WDocument extends WElement {
                         log.error("[图片文件下载失败:{}]", src);
                         return null;
                     }
-                    //HttpUtil.download(src, img);
                 }else{
                     log.error("[图片文件下载失败:{}][未提供downloader]", src);
                 }

@@ -290,7 +290,7 @@ public abstract class AbstractTag implements Tag {
             if(null != distinct && data instanceof Collection) {
                 if(data instanceof DataSet){
                     DataSet set = (DataSet) data;
-                    data = set.distinct(distinct.split(","));
+                    data = set.distinct(false, distinct.split(","));
                 }else{
                     data = BeanUtil.distinct((Collection) data, distinct.split(","));
                 }

@@ -468,9 +468,9 @@ public class TagUtil {
                     instance = doc.tag(name);
                 }
             }
-            if(null != instance) {
-                instance.ref(ref_text);
-            }
+        }
+        if(null != instance) {
+            instance.ref(ref_text);
         }
         return instance;
     }
@@ -592,6 +592,9 @@ public class TagUtil {
         //有不带属性的标签
         String sname = RegularUtil.cut(text, prefix, ">");
         if(null != name && null != sname && sname.length() < name.length()){
+            name = sname;
+        }
+        if(null == name){
             name = sname;
         }
         if(null == name){
