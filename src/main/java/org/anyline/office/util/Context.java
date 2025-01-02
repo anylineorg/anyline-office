@@ -210,26 +210,28 @@ public class Context {
                 Map map = new HashMap();
                 for(String k:variables.keySet()){
                     Object v = variables.get(k);
+                    if(data instanceof String){
+                        String str = (String)data;
+                        try {
+                            if (str.startsWith("{") && str.endsWith("}")) {
+                                v = DataRow.parseJson(str);
+                            }
+                            if (str.startsWith("[") && str.endsWith("]")) {
+                                v = DataSet.parseJson(str);
+                            }
+                        }catch (Exception ignored){ }
+                    }
                     if(v instanceof DataSet){
-                        v = ((DataSet)v).getRows();
+                        DataSet set = (DataSet)v;
+                        set.string2object();
+                        v = set.getRows();
+                    }else if(v instanceof DataRow){
+                        ((DataRow)v).string2object();
                     }
                     map.put(k, v);
                 }
                 data = Ognl.getValue(kk, ognl, map);
             }catch (Exception ignored){
-            }
-        }
-        if(data instanceof String){
-            String str = (String)data;
-            try {
-                if (str.startsWith("{") && str.endsWith("}")) {
-                    data = DataRow.parseJson(str);
-                }
-                if (str.startsWith("[") && str.endsWith("]")) {
-                    data = DataSet.parseJson(str);
-                }
-            }catch (Exception ignored){
-
             }
         }
         if(null == data && null != parent){
