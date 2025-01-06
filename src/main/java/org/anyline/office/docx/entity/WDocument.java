@@ -149,6 +149,7 @@ public class WDocument extends WElement {
             reg("sum", Sum.class);
             reg("mark", Mark.class);
             reg("html", Html.class);
+            reg("merge", Merge.class);
         }catch (Exception e){
             log.error("加载失败", e);
         }
