@@ -21,6 +21,7 @@ import org.anyline.util.BasicUtil;
 
 public class Group extends AbstractTag implements Tag{
     private String by;
+    private boolean extract = false;
 
     public void release(){
         super.release();
@@ -31,12 +32,13 @@ public class Group extends AbstractTag implements Tag{
     public void run(){
         var = fetchAttributeString("var");
         by = fetchAttributeString("by");
+        extract = BasicUtil.parseBoolean(fetchAttributeString("extract"), false);
         data = data();
         DataSet groups = null;
         if(BasicUtil.isNotEmpty(data) && BasicUtil.isNotEmpty(var) && BasicUtil.isNotEmpty(by)){
             if(data instanceof DataSet){
                 DataSet set = (DataSet) data;
-                groups = set.group(by.split(","));
+                groups = set.group(extract, by.split(","));
             }
         }
         output(groups);
