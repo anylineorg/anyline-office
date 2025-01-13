@@ -43,7 +43,7 @@ public class For extends AbstractTag implements Tag {
     private Integer fill; //填充空白行列(数据不足fill条时)
     private Integer vol;//遍历列时 每行最多几组
     private Boolean neat;
-    private boolean remove; //没有数据时 是否删除模板
+    private boolean remove = true; //没有数据时 是否删除模板
     public void prepare(){
         super.prepare();
         items = data(false);
@@ -68,6 +68,7 @@ public class For extends AbstractTag implements Tag {
         fill = null;
         vol = null;
         neat = null;
+        remove = true;
     }
 
     /**
@@ -339,7 +340,7 @@ public class For extends AbstractTag implements Tag {
             }
         }
          if(remove) {
-             box.remove();
+             box.remove(true);
              //删除模板列、行、表
              for (WTc tc : wtcs) {
                  tc.remove();
