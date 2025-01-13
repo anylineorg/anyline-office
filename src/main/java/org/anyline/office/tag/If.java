@@ -98,7 +98,7 @@ public class If extends AbstractTag implements Tag {
             }
         }else{
             //TagUtil.clear(doc, tops);
-            box.remove();
+            box.remove(true);
             output(chk);
         }
     }

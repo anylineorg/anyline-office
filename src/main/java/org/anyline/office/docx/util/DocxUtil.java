@@ -302,6 +302,9 @@ public class DocxUtil {
             return;
         }
         Element rp = ref.getParent();
+        if(null == rp){
+            rp = ref;
+        }
         Element sp = src.getParent();
         // 同级
         if(rp == sp || null == sp){
