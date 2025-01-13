@@ -1629,7 +1629,13 @@ public class WDocument extends WElement {
         File img = null;
         try {
             // 下载文件
-            if(RegularUtil.isUrl(src)) {
+            boolean is_url = RegularUtil.isUrl(src);
+            if(src.startsWith("url:")){
+                //项目中的url可能没有域名前缀/a/b.jpg url会与本地path格式一样，所以添加url:前缀区分
+                src = src.substring("url:".length());
+                is_url = true;
+            }
+            if(is_url) {
                 img = new File(tmpdir,"image" + rdm + "." + subfix);
                 if(null != downloader){
                     boolean result = downloader.download(src, img);
