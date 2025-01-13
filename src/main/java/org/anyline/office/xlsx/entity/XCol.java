@@ -220,8 +220,8 @@ public class XCol extends XElement{
                     exists = exists || replaces.containsKey(flag);
                 }
             }else{
-                content = replaces.get(flag);
-                exists =  exists || replaces.containsKey(flag);
+                //content = replaces.get(flag);
+                //exists =  exists || replaces.containsKey(flag);
             }
             if(null == content){
                 content = "";
