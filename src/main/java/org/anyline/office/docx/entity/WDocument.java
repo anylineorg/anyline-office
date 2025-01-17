@@ -150,6 +150,7 @@ public class WDocument extends WElement {
             reg("mark", Mark.class);
             reg("html", Html.class);
             reg("merge", Merge.class);
+            reg("page", PageBreak.class);
         }catch (Exception e){
             log.error("加载失败", e);
         }
