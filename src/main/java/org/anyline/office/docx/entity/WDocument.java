@@ -31,6 +31,7 @@ import org.anyline.office.docx.util.StyleUtil;
 import org.anyline.office.tag.Set;
 import org.anyline.office.tag.*;
 import org.anyline.office.util.Context;
+import org.anyline.office.util.Imager;
 import org.anyline.office.util.TagUtil;
 import org.anyline.util.*;
 import org.anyline.util.regular.RegularUtil;
@@ -72,6 +73,7 @@ public class WDocument extends WElement {
      * html转word时遇到url需要下载到本地
      */
     private Downloader downloader;
+    private Imager imager;
     private int listNum = 0;
     //标签命名空间<aol:for/>
     private String namespace = "aol";
@@ -81,7 +83,7 @@ public class WDocument extends WElement {
     /**
      * 支持的标签类型
      */
-    private Map<String, Class> tags = new HashMap<>();
+    private static Map<String, Class> tags = new HashMap<>();
     /**
      * 预定义标签
      */
@@ -151,11 +153,13 @@ public class WDocument extends WElement {
             reg("html", Html.class);
             reg("merge", Merge.class);
             reg("page", PageBreak.class);
+            reg("qr", QRCode.class);
+            reg("bar", BarCode.class);
         }catch (Exception e){
             log.error("加载失败", e);
         }
     }
-    public void reg(String name, Class<? extends Tag> clazz){
+    public static void reg(String name, Class<? extends Tag> clazz){
         tags.put(name, clazz);
     }
     public Tag tag(String name){
@@ -1018,6 +1022,14 @@ public class WDocument extends WElement {
         this.downloader = downloader;
     }
 
+    public Imager getImager() {
+        return imager;
+    }
+
+    public void setImager(Imager imager) {
+        this.imager = imager;
+    }
+
     public static int index(Element parent, Element element){
         int index = parent.indexOf(element);
         while(element.getParent() != parent){
@@ -1080,7 +1092,7 @@ public class WDocument extends WElement {
      * @return list
      */
     public List<Element> parseHtml(Element box, Element prev, String html){
-        List<Element> list = new ArrayList<Element>();
+        List<Element> list = new ArrayList<>();
         if(null == html || html.trim().length()==0){
             return list;
         }
