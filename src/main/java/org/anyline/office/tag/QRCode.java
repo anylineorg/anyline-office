@@ -18,9 +18,11 @@ package org.anyline.office.tag;
 
 import org.anyline.office.util.Imager;
 import org.anyline.util.BasicUtil;
+import org.anyline.util.StyleParser;
 
 import javax.imageio.ImageReader;
 import java.io.File;
+import java.util.Map;
 
 public class QRCode extends AbstractTag implements Tag{
     public void release(){
@@ -33,15 +35,32 @@ public class QRCode extends AbstractTag implements Tag{
         if(BasicUtil.isEmpty(value)){
             value = body(text, "qr");
         }
-        int width = BasicUtil.parseInt(fetchAttributeString("width", "w"), 100);
-        int height = BasicUtil.parseInt(fetchAttributeString("height", "h"), 100);
-        String style = "width:"+width+"px;height:"+height+"px;";
+        String style = fetchAttributeString("style");
+        Map<String, String> styles = StyleParser.parse(style);
+        String width = styles.get("width");
+        String height = styles.get("height");
+        if(BasicUtil.isEmpty(width)){
+            width = fetchAttributeString("width", "w");
+        }
+        if(BasicUtil.isEmpty(height)){
+            height = fetchAttributeString("height", "h");
+        }
+        int w = 100;
+        int h = 100;
+        if(null != width){
+            w = BasicUtil.parseInt(width.replace("px", "").trim(), w);
+        }
+        if(null != height){
+            h = BasicUtil.parseInt(height.replace("px", "").trim(), h);
+        }
+
         Imager imager = doc.getImager();
         if(null != imager) {
-            File file = imager.qr(value, width, height);
+            File file = imager.qr(value, w, h);
             String result = "<img src='file:" + file.getAbsolutePath() + "' style='" + style + "'/>";
             result = context.placeholder(result);
             doc.parseHtml(tops.get(0), contents.get(0), result);
+            file.delete();
         }
         box.remove();
     }

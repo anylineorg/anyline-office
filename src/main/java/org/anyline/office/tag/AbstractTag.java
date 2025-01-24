@@ -183,6 +183,7 @@ public abstract class AbstractTag implements Tag {
 
     protected String fetchAttributeString(String ... attributes){
         String text = box.head().text();
+        text = TagUtil.format(text);
         for(String attribute:attributes){
             String value = RegularUtil.fetchAttributeValue(text, attribute);
             if(null == value && null != ref){
