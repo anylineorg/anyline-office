@@ -585,6 +585,9 @@ public class WDocument extends WElement {
             if(BasicUtil.isEmpty(txt)){
                 continue;
             }
+            if(IS_HTML_ESCAPE){
+                txt = HtmlUtil.display(txt);
+            }
             List<String> flags = DocxUtil.splitKey(txt);
             if(flags.isEmpty()){
                 continue;
