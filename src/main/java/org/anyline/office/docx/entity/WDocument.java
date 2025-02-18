@@ -585,9 +585,6 @@ public class WDocument extends WElement {
             if(BasicUtil.isEmpty(txt)){
                 continue;
             }
-            if(IS_HTML_ESCAPE){
-                txt = HtmlUtil.display(txt);
-            }
             List<String> flags = DocxUtil.splitKey(txt);
             if(flags.isEmpty()){
                 continue;
@@ -631,7 +628,11 @@ public class WDocument extends WElement {
                             builder.append(content);
                         }
                     }
-                    t.setText(builder.toString());
+                    String builderContent = builder.toString();
+                    if(IS_HTML_ESCAPE){
+                        builderContent = HtmlUtil.name2code(builderContent);
+                    }
+                    t.setText(builderContent);
                 }else {
                     //有标签需要解析
                     //如果存在占位符 删除原内容 再重新添加新内容
@@ -641,6 +642,9 @@ public class WDocument extends WElement {
                         String content = flag;
                         if (BasicUtil.checkEl(flag)) {
                             content = context.string(flag);
+                        }
+                        if(IS_HTML_ESCAPE){
+                            content = HtmlUtil.name2code(content);
                         }
                         List<Element> list = parseHtml(r, prev, content);
                         if(!list.isEmpty()){
