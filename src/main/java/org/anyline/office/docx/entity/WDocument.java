@@ -1119,12 +1119,16 @@ public class WDocument extends WElement {
             Element root = doc.getRootElement();
             Element parse = parseHtml(box, prev, root, null, true);
             list.add(parse);
-            //提取出新添加的elements
+            //提取出新添加的 elements
             int size = root.elements().size();
             List<Element> elements = box.elements();
             int index = elements.indexOf(prev);
-            for(int i=0; i<size; i++){
-                list.add(elements.get(index+i+1));
+            if(index == -1){
+                list.addAll(elements);
+            }else {
+                for (int i = 0; i < size; i++) {
+                    list.add(elements.get(index + i + 1));
+                }
             }
         }catch (Exception e){
             log.error("xml格式异常:{}", html);
