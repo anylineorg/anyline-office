@@ -715,7 +715,7 @@ public class WDocument extends WElement {
                 int width = tableWidth / max;
                 for(int i=gridCols.size(); i<max; i++){
                     Element gridCol = tblGrid.addElement("w:gridCol");
-                    gridCol.addAttribute("w:w", width+"");
+                    gridCol.addAttribute("w:w", width+ "");
                 }
             }
         }
@@ -1331,7 +1331,7 @@ public class WDocument extends WElement {
             }
             if(colspan >1){
                 Element span = tcPr.addElement("w:gridSpan");
-                span.addAttribute("w:val", colspan+"");
+                span.addAttribute("w:val", colspan+ "");
             }
             if(tcPr.elements().size()==0){
                 // tc.remove(tcPr);
@@ -1507,8 +1507,8 @@ public class WDocument extends WElement {
     private Element li(Element parent, Element prev, Element element, Map<String, String> styles){
         Element box = parent.addElement("w:p");
         int lvl = lvl(element);
-        styles.put("list-lvl",lvl+"");
-        styles.put("list-num", listNum+"");
+        styles.put("list-lvl",lvl+ "");
+        styles.put("list-num", listNum+ "");
         pr(box, styles);
         DocxUtil.after(box, prev);
         prev = parseHtml(box, prev, element, styles, false);
@@ -1580,6 +1580,11 @@ public class WDocument extends WElement {
     }
 
     private Element img(Element parent, Element prev, Element element, Map<String, String> styles){
+        //计算文件资源引用id
+        Element relRoot = rels.getRootElement();
+        int id = relRoot.elements().size() + 1;
+        String rId = "rId" + id;
+
         String pname = parent.getName();
         Element r;
         if(pname.equalsIgnoreCase("r")){
@@ -1622,8 +1627,6 @@ public class WDocument extends WElement {
             height = DocxUtil.px2emu((int)DocxUtil.dxa2px(DocxUtil.dxa(styles.get("height"))));
         }
 
-        String rdm = System.currentTimeMillis()+"";
-        String rId = "rId"+rdm;
         String src = element.attributeValue("body");
         if(BasicUtil.isEmpty(src)){
             src = element.attributeValue("src");
@@ -1660,7 +1663,7 @@ public class WDocument extends WElement {
                 is_url = true;
             }
             if(is_url) {
-                img = new File(tmpdir,"image" + rdm + "." + subfix);
+                img = new File(tmpdir,"image" + id + "." + subfix);
                 if(null != downloader){
                     boolean result = downloader.download(src, img);
                     if(!result){
@@ -1690,7 +1693,6 @@ public class WDocument extends WElement {
                 img.delete();
             }
             // 创建文件资源引用
-            Element relRoot = rels.getRootElement();
             Element imgRel = relRoot.addElement("Relationship");
             imgRel.addAttribute("Id",rId);
             imgRel.addAttribute("Type","http://schemas.openxmlformats.org/officeDocument/2006/relationships/image");
@@ -1717,7 +1719,7 @@ public class WDocument extends WElement {
             box.addAttribute("distR","114300");
 
             int zIndex = BasicUtil.parseInt(styles.get("z-index"),100);
-            box.addAttribute("relativeHeight",zIndex+"");
+            box.addAttribute("relativeHeight",zIndex+ "");
             box.addAttribute("behindDoc","0");
             box.addAttribute("locked","0");
             box.addAttribute("layoutInCell","0");
@@ -1734,8 +1736,8 @@ public class WDocument extends WElement {
                 // 如果使用simplePos定位 这里设置成1
                 // 相对于页面的左上角定位对象
                 box.addAttribute("simplePos","1");
-                simplePos.addAttribute("x",offsetX+"");
-                simplePos.addAttribute("y",offsetY+"");
+                simplePos.addAttribute("x",offsetX+ "");
+                simplePos.addAttribute("y",offsetY+ "");
             }else{
                 // relative相对位
                 box.addAttribute("simplePos","0");
@@ -1758,7 +1760,7 @@ public class WDocument extends WElement {
                 Element positionH = box.addElement("wp:positionH");
                 positionH.addAttribute("relativeFrom",relativeX);
                 Element posOffsetH = positionH.addElement("wp:posOffset");
-                posOffsetH.setText(offsetX+"");
+                posOffsetH.setText(offsetX+ "");
                 /*对于垂直定位:
                 bottomMargin - 相对于底部边距
                 insideMargin - 相对于当前页面的内边距
@@ -1775,7 +1777,7 @@ public class WDocument extends WElement {
                 Element positionV = box.addElement("wp:positionV");
                 positionV.addAttribute("relativeFrom",relativeY);
                 Element posOffsetV = positionV.addElement("wp:posOffset");
-                posOffsetV.setText(offsetY+"");
+                posOffsetV.setText(offsetY+ "");
             }
         }else{
             // 不浮动
@@ -1787,8 +1789,8 @@ public class WDocument extends WElement {
         }
 
         Element extent = box.addElement("wp:extent");
-        extent.addAttribute("cx", width+"");
-        extent.addAttribute("cy", height+"");
+        extent.addAttribute("cx", width+ "");
+        extent.addAttribute("cy", height+ "");
 
         Element effectExtent = box.addElement("wp:effectExtent"); // 边距
         effectExtent.addAttribute("l","0");
@@ -1802,8 +1804,8 @@ public class WDocument extends WElement {
         }
         Element docPr = box.addElement("wp:docPr");
         int docPrId = NumberUtil.random(0,100);
-        docPr.addAttribute("id", docPrId+"");
-        docPr.addAttribute("name", "图片"+rdm);
+        docPr.addAttribute("id", docPrId + "");
+        docPr.addAttribute("name", "图片" + id);
         docPr.addAttribute("descr", img.getName());
         Element cNvGraphicFramePr = box.addElement("wp:cNvGraphicFramePr");
         Element graphicFrameLocks = cNvGraphicFramePr.addElement("a:graphicFrameLocks","http://schemas.openxmlformats.org/drawingml/2006/main");
@@ -1817,7 +1819,7 @@ public class WDocument extends WElement {
         pic.addAttribute("xmlns:pic","http://schemas.openxmlformats.org/drawingml/2006/picture");
         Element nvPicPr = pic.addElement("pic:nvPicPr");
         Element cNvPr = nvPicPr.addElement("pic:cNvPr");
-        cNvPr.addAttribute("id",docPrId+"");
+        cNvPr.addAttribute("id",docPrId+ "");
         cNvPr.addAttribute("name",img.getName());
         Element cNvPicPr = nvPicPr.addElement("pic:cNvPicPr");
         Element blipFill = pic.addElement("pic:blipFill");
@@ -1832,8 +1834,8 @@ public class WDocument extends WElement {
         off.addAttribute("x","0");
         off.addAttribute("y","0");
         Element ext = xfrm.addElement("a:ext");
-        ext.addAttribute("cx", width+"");
-        ext.addAttribute("cy", height+"");
+        ext.addAttribute("cx", width+ "");
+        ext.addAttribute("cy", height+ "");
         Element prstGeom = spPr.addElement("a:prstGeom");
         prstGeom.addAttribute("prst","rect");
         prstGeom.addElement("a:avLst");
