@@ -16,7 +16,10 @@
 
 package org.anyline.office.tag;
 
+import org.anyline.entity.DataRow;
+import org.anyline.entity.DataSet;
 import org.anyline.util.BasicUtil;
+import org.anyline.util.BeanUtil;
 import org.anyline.util.DateUtil;
 
 import java.util.Date;
@@ -27,11 +30,12 @@ public class DateFormat extends AbstractTag implements Tag{
     }
     @Override
     public void run() {
-        String result = null;
+        Object result = null;
         //<aot:date format="yyyy-MM-dd HH:mm:ss" value="${current_time}"></aot:date>
 
         //空值时 是否取当前时间
         String evl = fetchAttributeString("evl");
+        String property = fetchAttributeString("property", "p");
         String format = fetchAttributeString("format", "f");
         Date date = null;
         Object data = fetchAttributeData("value");
@@ -46,8 +50,24 @@ public class DateFormat extends AbstractTag implements Tag{
             }
         }
         if(null != data) {
-            date = DateUtil.parse(data);
-            result = DateUtil.format(date, format);
+            if(BasicUtil.isNotEmpty(property)){
+                //对象属性格式化
+                result = data;
+                if(data instanceof DataRow){
+                    DataRow row = (DataRow)data;
+                    row.format.date(format, property);
+                }else if(data instanceof DataSet){
+                    DataSet set = (DataSet)data;
+                    set.format.date(format, property);
+                }else {
+                    Object v = BeanUtil.getFieldValue(data, property);
+                    Date d = DateUtil.parse(v);
+                    result = DateUtil.format(d, format);
+                }
+            }else {
+                date = DateUtil.parse(data);
+                result = DateUtil.format(date, format);
+            }
         }
         output(result);
     }
