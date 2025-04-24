@@ -56,14 +56,18 @@ public class DateFormat extends AbstractTag implements Tag{
                 if(data instanceof DataRow){
                     DataRow row = (DataRow)data;
                     row.format.date(format, property);
-                }else if(data instanceof DataSet){
+                } else if(data instanceof DataSet){
                     DataSet set = (DataSet)data;
                     set.format.date(format, property);
-                }else {
+                } else {
                     Object v = BeanUtil.getFieldValue(data, property);
-                    Date d = DateUtil.parse(v);
-                    result = DateUtil.format(d, format);
+                    result = v;
+                    if(null != v){
+                        Date d = DateUtil.parse(v);
+                        result = DateUtil.format(d, format);
+                    }
                 }
+                //TODO 处理 List<Object> Map List<Map>格式
             }else {
                 date = DateUtil.parse(data);
                 result = DateUtil.format(date, format);
