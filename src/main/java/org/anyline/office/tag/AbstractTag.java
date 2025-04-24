@@ -16,6 +16,7 @@
 
 package org.anyline.office.tag;
 
+import org.anyline.entity.DataRow;
 import org.anyline.entity.DataSet;
 import org.anyline.log.Log;
 import org.anyline.log.LogProxy;
@@ -26,6 +27,7 @@ import org.anyline.office.util.TagUtil;
 import org.anyline.util.BasicUtil;
 import org.anyline.util.BeanUtil;
 import org.anyline.util.ConfigTable;
+import org.anyline.util.DateUtil;
 import org.anyline.util.regular.RegularUtil;
 import org.dom4j.Element;
 
@@ -262,8 +264,22 @@ public abstract class AbstractTag implements Tag {
         Integer end = BasicUtil.parseInt(fetchAttributeString("end", "e"), null);
         Integer qty = BasicUtil.parseInt(fetchAttributeString("qty", "q"), null);
         String selector = fetchAttributeString("selector","st");
+        String formatDate = fetchAttributeString("formatDate", "fd");
 
         if(data instanceof Collection) {
+            if(data instanceof DataSet && null != property && BasicUtil.isNotEmpty(formatDate)){
+                // 处理数据源指定日期字段的格式
+                DataSet set = (DataSet) data;
+                for (DataRow row : set) {
+                    String dateStr = row.getString(property);
+                    try {
+                        row.put(property, DateUtil.format(dateStr, formatDate));
+                    } catch (Exception e){
+                        // 格式化失败，输出原值
+                    }
+                }
+                data = set;
+            }
             Collection items = (Collection) data;
             if(BasicUtil.isNotEmpty(selector)) {
                 items = BeanUtil.select(items,selector.split(","));

@@ -630,7 +630,7 @@ public class WDocument extends WElement {
                     }
                     String builderContent = builder.toString();
                     if(IS_HTML_ESCAPE){
-                        builderContent = HtmlUtil.name2code(builderContent);
+                        builderContent = HtmlUtil.display(builderContent);
                     }
                     t.setText(builderContent);
                 }else {
@@ -650,6 +650,24 @@ public class WDocument extends WElement {
                         if(!list.isEmpty()){
                             prev = list.get(list.size()-1);
                         }
+                    }
+                }
+            }else{
+                if(IS_HTML_ESCAPE){
+                    t.setText(HtmlUtil.display(txt));
+                    if(txt.contains("<br/>")){
+                        String[] split = txt.split("<br/>");
+                        if(split.length == 1){
+                            t.setText(t.getTextTrim().replace("<br/>", ""));
+                        }else{
+                            t.setText("");
+                            for (String splitContent : split){
+                                t.addElement("w:t").setText(splitContent);
+                                t.addElement("w:br");
+                            }
+                        }
+                        // 插入换行符
+                        t.setText(t.getTextTrim().replace("<br/>", "\r\n"));
                     }
                 }
             }
