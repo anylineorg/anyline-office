@@ -100,7 +100,7 @@ public class XSheet {
     }
     /**
      * 插入行 注意插入行后 index 之后所有行与单元格需要重新计算r属性 如果插入量大 应该在插入完成后一次生调整
-     * @param index 插入位置 下标从0开始 如果index<0 index=rows.size+index -1:表示最后一行
+     * @param index 插入位置 下标从0开始 如果index小于0 index=rows.size+index -1:表示最后一行
      * @param values 行内数据
      * @param template 模板行 如果null则以最后index上一行作模板(如果index是0则以index行作模板)
      * @return XRow
@@ -116,7 +116,7 @@ public class XSheet {
 
     /**
      * 插入行 以上一行为模板
-     * @param index 插入位置 下标从0开始 如果index<0 index=rows.size+index -1:表示最后一行
+     * @param index 插入位置 下标从0开始 如果index小于0 index=rows.size+index -1:表示最后一行
      * @param values 行内数据
      * @return XRow
      */

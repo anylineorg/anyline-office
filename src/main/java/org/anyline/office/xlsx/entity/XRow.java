@@ -60,8 +60,8 @@ public class XRow extends XElement{
         return placeholders("\\$\\{.*?\\}");
     }
     /**
-     * 创建并插入行(index<0时 index = rows.size+index)
-     * @param index 插入位置 下标从0开始 如果index<0 index=rows.size+index -1:表示最后一行
+     * 创建并插入行(index &lt; 0时 index = rows.size+index)
+     * @param index 插入位置 下标从0开始 如果index小于0 index=rows.size+index -1:表示最后一行
      * @param book XWorkBook
      * @param sheet XSheet
      * @param template 模板行 如果null则以最后一行作模板
