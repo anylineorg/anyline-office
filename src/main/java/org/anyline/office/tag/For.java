@@ -22,7 +22,7 @@ import org.anyline.office.docx.entity.WTable;
 import org.anyline.office.docx.entity.WTc;
 import org.anyline.office.docx.entity.WTr;
 import org.anyline.office.docx.util.DocxUtil;
-import org.anyline.office.util.Context;
+import org.anyline.runtime.Context;
 import org.anyline.office.util.TagUtil;
 import org.anyline.util.BasicUtil;
 import org.anyline.util.BeanUtil;

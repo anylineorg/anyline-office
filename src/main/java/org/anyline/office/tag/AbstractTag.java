@@ -22,7 +22,7 @@ import org.anyline.log.Log;
 import org.anyline.log.LogProxy;
 import org.anyline.office.docx.entity.WDocument;
 import org.anyline.office.docx.util.DocxUtil;
-import org.anyline.office.util.Context;
+import org.anyline.runtime.Context;
 import org.anyline.office.util.TagUtil;
 import org.anyline.util.BasicUtil;
 import org.anyline.util.BeanUtil;
@@ -76,7 +76,7 @@ public abstract class AbstractTag implements Tag {
             head.text(t0.getText());
             t0.setText("");
 
-            if(this.contents.size() > 0){
+            if(!this.contents.isEmpty()){
                 t1 = this.contents.get(this.contents.size()-1);
                 foot.element(t1);
                 // foot在top中的下标 注意区分是在首行(中有一行)还是尾行
@@ -278,7 +278,6 @@ public abstract class AbstractTag implements Tag {
                         // 格式化失败，输出原值
                     }
                 }
-                data = set;
             }
             Collection items = (Collection) data;
             if(BasicUtil.isNotEmpty(selector)) {
